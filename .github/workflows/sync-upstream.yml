@@ -1,0 +1,77 @@
+name: Sync upstream
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sync-upstream.yml'
+      - 'tools/sync_upstream.py'
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+    inputs:
+      keep_running:
+        description: Keep checking upstream every 15 minutes (false runs once)
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository_owner == 'lightningblade-1234' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      # GitHub's cron can skip or delay runs for hours. Keep a runner until the next
+      # check and dispatch a fresh run ourselves; cron remains a recovery trigger.
+      - name: Set the next upstream check time
+        id: clock
+        run: echo "next=$(( $(date +%s) + 900 ))" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Configure automated merge identity and public-tree hooks
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config core.hooksPath .githooks
+      - name: Merge and push only without conflicts
+        id: merge
+        run: python tools/sync_upstream.py
+      # Pushes with GITHUB_TOKEN do not trigger other push workflows. Dispatch explicitly.
+      - name: Start source checks after an update
+        if: steps.merge.outputs.status == 'updated'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --ref main -f source_only=true
+      - name: Build a fork launcher release when its inputs changed
+        if: steps.merge.outputs.status == 'updated' && steps.merge.outputs.launcher_changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run offline-launcher.yml --ref main
+      # Reschedule after errors and conflicts too, so a resolved conflict or a
+      # transient fetch failure cannot silently stop the automatic merger.
+      # Cancelling/disabling the workflow stops the recurring poller.
+      - name: Wait for the next 15-minute check
+        if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.keep_running) }}
+        env:
+          NEXT_CHECK: ${{ steps.clock.outputs.next }}
+        run: |
+          remaining=$(( ${NEXT_CHECK:-$(date +%s)} - $(date +%s) ))
+          if [ "$remaining" -gt 0 ]; then sleep "$remaining"; fi
+      - name: Start the next automatic sync
+        if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.keep_running) }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run sync-upstream.yml --ref main -f keep_running=true
