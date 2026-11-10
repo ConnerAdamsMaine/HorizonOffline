@@ -1921,6 +1921,9 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
     };
     match action {
         AccountCmd::List => {
+            // The offline release plays offline names with no owner at all, so the owner gate's
+            // hints would be wrong there.
+            let offline_play = backend::Settings::load().dev_offline;
             if as_json {
                 json(serde_json::json!({
                     "accounts": accounts.accounts.iter().map(|a| serde_json::json!({
@@ -1936,10 +1939,17 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
                     "owner": accounts.has_owner(account::store()),
                 }));
             } else if accounts.accounts.is_empty() && accounts.offline.is_empty() {
-                println!(
-                    "No Microsoft account signed in. Play needs one that owns Minecraft: Java \
-                     Edition: horizon-launcher account sign-in"
-                );
+                if offline_play {
+                    println!(
+                        "No account needed: enter an offline name on Home, or add one with \
+                         `horizon-launcher account offline NAME`."
+                    );
+                } else {
+                    println!(
+                        "No Microsoft account signed in. Play needs one that owns Minecraft: Java \
+                         Edition: horizon-launcher account sign-in"
+                    );
+                }
             } else {
                 for a in &accounts.accounts {
                     let mark = if accounts.selected.as_ref() == Some(&a.uuid) {
@@ -1964,7 +1974,7 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
                         "Playing offline as the game's own name (`account select NAME` to switch)."
                     );
                 }
-                if !accounts.has_owner(account::store()) {
+                if !offline_play && !accounts.has_owner(account::store()) {
                     println!(
                         "{} {}",
                         account::NoOwner::default(),
@@ -2060,7 +2070,11 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
                 ),
                 (None, None) => return Err(find(&accounts, &who).unwrap_err()),
             };
-            accounts.play_as(account::store(), player)?;
+            accounts.play_as_with(
+                account::store(),
+                player,
+                backend::Settings::load().dev_offline,
+            )?;
             accounts.save()?;
             println!("The game plays as {name}.");
         }
@@ -2069,7 +2083,11 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
                 Some(n) => account::Player::Offline(n),
                 None => account::Player::GameName,
             };
-            accounts.play_as(account::store(), player)?;
+            accounts.play_as_with(
+                account::store(),
+                player,
+                backend::Settings::load().dev_offline,
+            )?;
             accounts.save()?;
             match accounts.name_arg() {
                 Some(n) => println!("The game plays offline as {n}."),

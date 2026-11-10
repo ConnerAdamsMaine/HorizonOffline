@@ -6,7 +6,9 @@
 2. Download **horizon-launcher-setup.exe** and run the existing installer, or open **horizon-launcher.exe** directly.
 3. In **Home**, enter your **Offline name** and press **Play**. Use **Versions** if you need to choose/install a game build.
 
-Running the released launcher needs no Rust, Visual Studio, source checkout or Microsoft login.
+This build has no Microsoft sign-in at all: there is no account to create and no browser step.
+The name typed in **Home** is the whole identity, and the same name keeps the same offline UUID.
+Running the released launcher needs no Rust, Visual Studio or source checkout.
 The release contains only the launcher and license/setup notices. Minecraft JARs, assets and
 prepared game files are never distributed with it.
 

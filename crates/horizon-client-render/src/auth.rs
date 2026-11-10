@@ -19,6 +19,10 @@ pub struct AuthSession {
     pub name: String,
     pub uuid: u128,
     pub xuid: Option<String>,
+    /// The session file's `user_type`: true for the launcher's offline profile ("legacy"). An
+    /// offline session names a player; it is never a credential, so it never becomes
+    /// [`current`] and nothing asks the services about it.
+    offline: bool,
     access_token: String,
 }
 impl std::fmt::Debug for AuthSession {
@@ -26,6 +30,7 @@ impl std::fmt::Debug for AuthSession {
         f.debug_struct("AuthSession")
             .field("name", &self.name)
             .field("uuid", &horizon_protocol::crypto::uuid_string(self.uuid))
+            .field("offline", &self.offline)
             .field("access_token", &"<hidden>")
             .finish()
     }
@@ -46,8 +51,15 @@ impl AuthSession {
             name: name.to_owned(),
             uuid,
             xuid: None,
+            offline: false,
             access_token: access_token.to_owned(),
         }
+    }
+
+    /// Whether this is the launcher's offline profile: a name and a stable UUID, and no account
+    /// to sign in with.
+    pub fn is_offline(&self) -> bool {
+        self.offline
     }
 
     pub fn access_token(&self) -> &str {
@@ -68,13 +80,15 @@ impl AuthSession {
         let access_token = field("access_token")
             .filter(|t| !t.is_empty())
             .ok_or("the session has no access token")?;
-        if field("user_type").is_some_and(|t| t != "msa") {
+        let user_type = field("user_type").unwrap_or("msa");
+        if user_type != "msa" && user_type != "legacy" {
             return Err("the session is not a Microsoft account session".into());
         }
         Ok(Self {
             name: name.to_owned(),
             uuid,
             xuid: field("xuid").map(str::to_owned),
+            offline: user_type == "legacy",
             access_token: access_token.to_owned(),
         })
     }
@@ -760,7 +774,16 @@ mod tests {
             .is_err()
         );
         assert!(AuthSession::parse(r#"{"name":"A","uuid":"nope","access_token":"t"}"#).is_err());
-        assert!(AuthSession::parse(r#"{"name":"A","uuid":"069a79f444e94726a5befca90e38aaf5","access_token":"t","user_type":"legacy"}"#).is_err());
+        let s = AuthSession::parse(r#"{"name":"A","uuid":"069a79f444e94726a5befca90e38aaf5","access_token":"t","user_type":"legacy"}"#).unwrap();
+        assert_eq!(s.name, "A");
+        assert_eq!(s.access_token, "t");
+        // The launcher's offline profile: a player's name, not an account to sign in with.
+        assert!(s.is_offline());
+        let msa = AuthSession::parse(
+            r#"{"name":"A","uuid":"069a79f444e94726a5befca90e38aaf5","access_token":"t"}"#,
+        )
+        .unwrap();
+        assert!(!msa.is_offline());
         let s = AuthSession::parse(r#"{"name":"A","uuid":"069a79f444e94726a5befca90e38aaf5","access_token":"t","xuid":"25"}"#).unwrap();
         assert_eq!(s.xuid.as_deref(), Some("25"));
     }

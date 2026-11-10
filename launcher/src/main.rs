@@ -4317,6 +4317,10 @@ impl Launcher {
     fn account_rows(&mut self, cx: &mut Context<Self>) -> (Div, usize) {
         let t = self.theme;
         let (mut rows, mut n) = self.microsoft_rows(cx);
+        // The offline release has no Microsoft sign-in: no sign-in card, only the offline names.
+        if account::offline_build() {
+            return (rows, n);
+        }
         n += 1;
         let (title, detail, action) = self.sign_in_parts(cx);
         rows = rows.child(index_row(

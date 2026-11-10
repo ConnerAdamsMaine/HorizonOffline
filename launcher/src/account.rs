@@ -36,6 +36,14 @@ const SIGN_IN_AGAIN: &str = "Your Microsoft sign-in expired. Sign in again.";
 /// The Minecraft token is renewed when it has less than this left.
 const RENEW_BEFORE: u64 = 3600;
 
+/// Whether this build is packaged to play offline names without a Microsoft account:
+/// `HORIZON_OFFLINE_LAUNCHER=1` at build time, which the offline launcher release sets. It only
+/// opens the owner gate for offline names; Mojang's files are still downloaded for an owner alone
+/// (`backend::download_for_owner`).
+pub fn offline_build() -> bool {
+    option_env!("HORIZON_OFFLINE_LAUNCHER").is_some_and(|v| !v.trim().is_empty())
+}
+
 /// The configured Azure app, if any: the run-time variable wins over the build-time one, and an
 /// empty value means none.
 pub fn client_id() -> Option<String> {
@@ -1974,6 +1982,9 @@ pub struct Launch {
     pub session: Option<(Account, Secrets)>,
     /// Why the selected account plays without its session this time.
     pub offline: Option<String>,
+    /// The offline name that plays, when one does: the game gets it as its own profile, never as
+    /// a Microsoft account.
+    pub offline_name: Option<String>,
     /// An account the services said owns the game just now, the selected one first: who the
     /// launcher may download the game for.
     pub owner: Option<(Account, Secrets)>,
@@ -2004,7 +2015,10 @@ pub fn launch(
     let selected = accounts.selected.clone();
     let mut order = accounts.accounts.clone();
     order.sort_by_key(|a| Some(&a.uuid) != selected.as_ref());
-    let mut pass = Launch::default();
+    let mut pass = Launch {
+        offline_name: accounts.name_arg().map(str::to_owned),
+        ..Launch::default()
+    };
     let mut owned = false;
     let mut unreadable = None;
     for account in order {
@@ -2099,17 +2113,23 @@ pub fn launch_for_game(
     offline_without_owner: bool,
 ) -> Result<Launch, NoOwner> {
     match launch(ep, client_id, store, accounts) {
-        Err(NoOwner { .. }) if offline_without_owner => Ok(Launch::default()),
+        Err(NoOwner { .. }) if offline_without_owner => Ok(Launch {
+            // No owner, but the offline name still plays: it names the session file below.
+            offline_name: accounts.name_arg().map(str::to_owned),
+            ..Launch::default()
+        }),
         pass => pass,
     }
 }
 
 /// Write the session for the game, readable by this user only, in a fresh file it deletes
-/// when it reads it.
+/// when it reads it. `user_type` is the session file's type: "msa" for a Microsoft account,
+/// "legacy" for an offline player.
 pub fn write_session_file(
     dir: &Path,
     account: &Account,
     secrets: &Secrets,
+    user_type: &str,
 ) -> Result<PathBuf, String> {
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     // The folder too is this user's only (the files already are).
@@ -2145,11 +2165,32 @@ pub fn write_session_file(
         "name": account.name,
         "uuid": account.uuid,
         "access_token": secrets.minecraft_token,
-        "user_type": "msa",
+        "user_type": user_type,
         "xuid": secrets.xuid,
     });
     std::io::Write::write_all(&mut file, body.to_string().as_bytes()).map_err(|e| e.to_string())?;
     Ok(path)
+}
+
+/// The session file for an offline player (name): a stable UUID from the name, as the game
+/// makes one up, and the legacy user type the game expects offline. No token is real: the
+/// game never checks one, so it is a placeholder only.
+pub fn write_offline_session_file(dir: &Path, name: &str) -> Result<PathBuf, String> {
+    let account = Account {
+        uuid: horizon_protocol::crypto::uuid_string(horizon_protocol::crypto::offline_uuid(name)),
+        name: name.to_owned(),
+        skin: None,
+        cape: None,
+    };
+    let secrets = Secrets {
+        refresh_token: String::new(),
+        sign_in_required: false,
+        minecraft_token: "offline-token".to_owned(),
+        minecraft_expires_at: 0,
+        xuid: None,
+        owns: true,
+    };
+    track(write_session_file(dir, &account, &secrets, "legacy")?)
 }
 
 /// How long a game takes a session file: it refuses one older than this (the game's
@@ -2168,7 +2209,11 @@ fn write_launch_session_file(
     account: &Account,
     secrets: &Secrets,
 ) -> Result<PathBuf, String> {
-    let path = write_session_file(dir, account, secrets)?;
+    track(write_session_file(dir, account, secrets, "msa")?)
+}
+
+/// Keeps `path` in [`UNREAD`] until the game reads it, or [`SESSION_FILE_LIFE`] passes.
+fn track(path: PathBuf) -> Result<PathBuf, String> {
     let Ok(mut unread) = UNREAD.lock() else {
         return Ok(path);
     };
@@ -2423,6 +2468,12 @@ fn session_file(game_home: &Path, pass: Launch, env: Vec<(&'static str, String)>
     };
     if let Some((account, secrets)) = pass.session {
         match write_launch_session_file(&game_home.join("sessions"), &account, &secrets) {
+            Ok(file) => out.file = Some(file),
+            Err(e) => out.offline = Some(e),
+        }
+    } else if let Some(name) = &pass.offline_name {
+        // Offline play: the name and the stable UUID the game makes from it, never a token.
+        match write_offline_session_file(&game_home.join("sessions"), name) {
             Ok(file) => out.file = Some(file),
             Err(e) => out.offline = Some(e),
         }

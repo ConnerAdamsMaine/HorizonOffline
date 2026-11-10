@@ -728,6 +728,12 @@ impl Options {
                 .transpose()
         };
         match session {
+            // The launcher's offline profile: its player's name, and nothing that signs in. It is
+            // not an account, so it never becomes `auth::current()`: the game builds that
+            // player's offline UUID from the name, as it does without a launcher.
+            Ok(Some(session)) if session.is_offline() => {
+                o.player_name = Some(session.name.clone());
+            }
             Ok(Some(session)) => {
                 o.player_name = Some(session.name.clone());
                 horizon_client::auth::set_current(session);

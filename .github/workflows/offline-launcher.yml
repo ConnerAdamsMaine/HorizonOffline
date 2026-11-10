@@ -31,6 +31,9 @@ jobs:
       RUSTFLAGS: '-C target-feature=+crt-static'
       # Compiled in: opening the downloaded EXE needs no environment-variable setup.
       HORIZON_LAUNCHER_NO_SELF_UPDATE: '1'
+      # Compiled in: offline names play with no Microsoft account, so a download needs no sign-in.
+      HORIZON_OFFLINE_LAUNCHER: '1'
+      HORIZON_MSA_CLIENT_ID: ''
       HORIZON_NO_AUDIO: '1'
       HORIZON_TELEMETRY_URL: 'off'
     defaults:
@@ -103,7 +106,7 @@ jobs:
           > 🤖 Published automatically for lightningblade-1234's fork by the agent-authored GitHub Actions workflow (OpenCode, GPT-6.1 Sol).
 
           Download **horizon-launcher-setup.exe** to install, or **horizon-launcher.exe** to run directly.
-          Open Home, enter your offline name, and press Play. No Rust, Visual Studio or Microsoft login is needed to run this launcher.
+          This build has no Microsoft sign-in at all: open Home, type an offline name, and press Play. No Rust, Visual Studio or Microsoft account is needed.
 
           Supply your own Minecraft files locally; no Mojang JARs, assets or prepared game data are included in these downloads.
           [First-time setup](https://github.com/$env:GITHUB_REPOSITORY/blob/main/launcher/FORK-SETUP.md).

@@ -3377,13 +3377,15 @@ pub fn client_as(tag: &str, who: Option<&account::Player>) -> Result<Command, St
     play_step("reading the sign-in");
     let hint = |refused: String| format!("{refused} {}", crate::i18n::tr(SIGN_IN_HINT));
     let session = match who {
-        None => account::session_for_game(&game_home(), false).map_err(|refused| {
-            // A keyring that didn't answer isn't a missing sign-in (#12179).
-            match refused.keyring {
-                Some(why) => why,
-                None => hint(refused.to_string()),
-            }
-        }),
+        None => account::session_for_game(&game_home(), Settings::load().dev_offline).map_err(
+            |refused| {
+                // A keyring that didn't answer isn't a missing sign-in (#12179).
+                match refused.keyring {
+                    Some(why) => why,
+                    None => hint(refused.to_string()),
+                }
+            },
+        ),
         Some(who) => account::session_for_game_as(&game_home(), who).map_err(hint),
     }?;
     if let Err(e) = need_prepared(tag) {
@@ -4722,7 +4724,14 @@ pub struct Settings {
 
 impl Settings {
     pub fn load() -> Self {
-        Self::parse(&fs::read_to_string(data_dir().join("settings.json")).unwrap_or_default())
+        let mut settings =
+            Self::parse(&fs::read_to_string(data_dir().join("settings.json")).unwrap_or_default());
+        // The offline release is built without Microsoft sign-in, so an offline name is all a
+        // player needs: the switch has to be on for Play, the account menu and the CLI alike.
+        if crate::account::offline_build() {
+            settings.dev_offline = true;
+        }
+        settings
     }
     pub fn parse(text: &str) -> Self {
         let Ok(mut value) = serde_json::from_str::<serde_json::Value>(text) else {

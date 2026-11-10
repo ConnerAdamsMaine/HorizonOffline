@@ -352,7 +352,7 @@ pub(super) fn renew_for_game_with(
     let secrets = read(store, &account.uuid)
         .map_err(|e| Status::failed(&e))?
         .ok_or_else(|| Status::from_secrets(None))?;
-    write_session_file(dir, account, &secrets).map_err(|e| Status::failed(&e))
+    write_session_file(dir, account, &secrets, "msa").map_err(|e| Status::failed(&e))
 }
 
 /// Mojang's session server: what an online-mode server asks to check that a player is who they

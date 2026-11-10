@@ -528,9 +528,9 @@ fn splitscreen_never_hands_over_an_account_sent_back_to_sign_in() {
 fn unread_session_files_go_once_the_game_would_refuse_them() {
     let dir = std::env::temp_dir().join(format!("hz-session-reap-{}", std::process::id()));
     let secrets = secrets("not-a-real-token", true);
-    let waiting = write_session_file(&dir, &notch(), &secrets).unwrap();
-    let stale = write_session_file(&dir, &notch(), &secrets).unwrap();
-    let read = write_session_file(&dir, &notch(), &secrets).unwrap();
+    let waiting = write_session_file(&dir, &notch(), &secrets, "msa").unwrap();
+    let stale = write_session_file(&dir, &notch(), &secrets, "msa").unwrap();
+    let read = write_session_file(&dir, &notch(), &secrets, "msa").unwrap();
     // A game that never started: its file is past the age the game takes.
     std::fs::File::options()
         .write(true)
@@ -756,6 +756,50 @@ fn the_developer_option_plays_offline_names_without_an_owner() {
     let mut accounts = signed_in(&store, &secrets("mc-token", true));
     let pass = launch_for_game(&ep, Some("test-client"), &store, &mut accounts, true).unwrap();
     assert_eq!(pass.owner.unwrap().0.name, "Notch");
+}
+
+#[test]
+fn an_offline_name_gets_a_session_file_of_its_own() {
+    let store = MemoryStore::default();
+    let mut accounts = Accounts::default();
+    accounts
+        .play_as_with(&store, Player::Offline("Builder_1".into()), true)
+        .unwrap();
+    let (_, ep) = mock(|_| {});
+    let pass = launch_for_game(&ep, Some("test-client"), &store, &mut accounts, true).unwrap();
+    assert_eq!(pass.offline_name.as_deref(), Some("Builder_1"));
+    let dir = std::env::temp_dir().join(format!("hz-offline-session-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let file = session_file(&dir, pass, Vec::new())
+        .file
+        .expect("an offline session file");
+    let session: Value = serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+    assert_eq!(session["name"], "Builder_1");
+    assert_eq!(session["user_type"], "legacy");
+    // The UUID the game itself gives that name: the same player in every world.
+    assert_eq!(
+        session["uuid"],
+        horizon_protocol::crypto::uuid_string(horizon_protocol::crypto::offline_uuid("Builder_1"))
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn an_account_that_plays_offline_gets_no_made_up_session() {
+    // Why it plays offline is not a player name: it must not become one.
+    let dir = std::env::temp_dir().join(format!("hz-offline-reason-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let pass = Launch {
+        offline: Some("Your Microsoft sign-in expired. Sign in again.".into()),
+        ..Launch::default()
+    };
+    let session = session_file(&dir, pass, Vec::new());
+    assert!(session.file.is_none(), "no session file without a name");
+    assert!(
+        session.offline.is_some(),
+        "the reason still reaches the player"
+    );
+    assert!(!dir.exists(), "no sessions folder for a reason alone");
 }
 
 #[test]
@@ -1119,7 +1163,7 @@ fn session_files_are_private_and_complete() {
         xuid: Some("25".into()),
         owns: true,
     };
-    let path = write_session_file(&dir, &account, &secrets).unwrap();
+    let path = write_session_file(&dir, &account, &secrets, "msa").unwrap();
     let v: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(
         v,
@@ -1135,7 +1179,7 @@ fn session_files_are_private_and_complete() {
             0o600
         );
     }
-    let other = write_session_file(&dir, &account, &secrets).unwrap();
+    let other = write_session_file(&dir, &account, &secrets, "msa").unwrap();
     assert_ne!(path, other);
     let _ = std::fs::remove_dir_all(&dir);
 }

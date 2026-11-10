@@ -17,6 +17,10 @@ impl Launcher {
     pub(super) fn glass_account(&mut self, cx: &mut Context<Self>) -> Div {
         let wide = self.window_width >= crate::glass_home::WIDE;
         let left = self.glass_who_plays(cx);
+        // The offline release has no Microsoft sign-in: only the offline names card.
+        if account::offline_build() {
+            return left.p(px(20.));
+        }
         let right = self.glass_microsoft_card(cx);
         if wide {
             div()
