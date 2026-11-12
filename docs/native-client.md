@@ -17,6 +17,11 @@ release and native-mod updates. Its private runtime copy lives under the launche
 data folder in `run/<home key>/game/`; installed versions remain intact. Opening a
 world to other machines can still require an initial Windows Firewall permission.
 The launcher does not create firewall rules or change network-profile settings.
+Recent offline launcher builds carry the game in one per-user payload folder (`payload/<key>/` under the launcher
+data folder) instead of requiring a `versions/<tag>/` download. The launcher installs the embedded payload whole,
+verifies every file against `payload.json`, and starts the program the manifest names; `payload list`, `payload
+verify`, `payload prune` and `payload install` manage it. The design and its current limits are in
+[design/centralized-launcher.md](design/centralized-launcher.md).
 
 ## musl Linux: manual installation
 

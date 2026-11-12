@@ -9,8 +9,8 @@ use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
-pub const REPO: &str = "horizon-rust/horizon";
-pub const README_URL: &str = "https://github.com/horizon-rust/horizon/blob/main/launcher/README.md";
+pub const REPO: &str = "ConnerAdamsMaine/HorizonOffline";
+pub const README_URL: &str = "https://github.com/ConnerAdamsMaine/HorizonOffline/blob/main/launcher/README.md";
 /// The players' page on connecting an AI agent (the website's docs/agents.md).
 pub const AGENT_DOCS_URL: &str = "https://playhorizon.dev/docs/agents";
 /// This launcher's version: the release workflow sets `HORIZON_LAUNCHER_VERSION` from the
@@ -324,7 +324,7 @@ fn installed_game_architecture(tag: &str) -> Option<InstalledGameArchitecture> {
     serde_json::from_slice(&fs::read(dir.join(GAME_BUILD_ARCHITECTURE)).ok()?)
         .ok()
         .or_else(|| {
-            let binary = pe_architecture_file(&dir.join(CLIENT))?;
+            let binary = pe_architecture_file(&client_program(tag))?;
             Some(InstalledGameArchitecture {
                 requested: binary,
                 binary,
@@ -1058,7 +1058,7 @@ pub fn mod_api_level(tag: &str) -> u32 {
     if let Some(&(_, level)) = levels.iter().find(|(t, _)| t == tag) {
         return level;
     }
-    let level = program_mod_api_level(&version_dir(tag).join(CLIENT));
+    let level = program_mod_api_level(&client_program(tag));
     levels.push((tag.to_owned(), level));
     level
 }
@@ -1069,9 +1069,17 @@ fn program_mod_api_level(path: &Path) -> u32 {
     horizon_mods::api_level::read_mark(&program).unwrap_or(0)
 }
 
-/// Installed versions, newest tag first.
+/// Installed versions, newest tag first. An installed payload's version stub counts: the
+/// launcher owns that build even though no `versions/<tag>/` install downloaded it.
 pub fn installed() -> Vec<String> {
-    installed_in(&versions_dir())
+    let mut tags = installed_in(&versions_dir());
+    for (_, manifest, _) in crate::payload::installed() {
+        if !tags.contains(&manifest.tag) {
+            tags.push(manifest.tag);
+        }
+    }
+    tags.sort_by(|a, b| compare_versions(b, a));
+    tags
 }
 
 fn installed_in(versions: &Path) -> Vec<String> {
@@ -2556,7 +2564,7 @@ pub fn preparer(
         .join("versions")
         .join(&version)
         .join(format!("{version}.json"));
-    let binary = preparer_binary(&dir);
+    let binary = preparer_binary(&dir).or_else(|| crate::payload::preparer_for(tag));
     let python = match binary {
         Some(_) => None,
         None => Some(python().ok_or(
@@ -3062,7 +3070,14 @@ pub fn client_command(tag: &str) -> Command {
     let _ = fs::create_dir_all(&home);
     let mut cmd = Command::new(client_program(tag));
     #[cfg(windows)]
-    crate::windows_runtime::mark(&mut cmd, &version_dir(tag));
+    {
+        // The slot stages from the payload when one serves this tag; the manifest, not a
+        // filename, chose the program (centralized-launcher.md, "Slots and firewall identity").
+        let source = crate::payload::program_for(tag)
+            .and_then(|program| program.parent().map(Path::to_path_buf))
+            .unwrap_or_else(|| version_dir(tag));
+        crate::windows_runtime::mark(&mut cmd, &source);
+    }
     strip_launcher_render_env(&mut cmd);
     cmd.current_dir(&home)
         .env("HORIZON_HOME", &home)
@@ -3123,6 +3138,7 @@ pub fn local_client_with_log(
     log: &dyn Fn(String),
 ) -> Result<Command, String> {
     validate_local_name(name)?;
+    crate::payload::prepare_for_launch()?;
     let tag = resolve_version(Some(tag))?;
     if let Some(error) = game_architecture_launch_error(&tag) {
         return Err(error);
@@ -3140,6 +3156,11 @@ pub fn local_client_with_log(
 /// The game's program: on macOS the one inside the version's Horizon.app, so the Dock and Cmd+Tab
 /// show Horizon's name and icon (game_app.rs); the bare binary elsewhere, or if that fails.
 fn client_program(tag: &str) -> PathBuf {
+    // A payload's manifest names the program. It is chosen before the version folder, so a
+    // stale `versions/<tag>/horizon-client` can never run instead of the payload.
+    if let Some(program) = crate::payload::program_for(tag) {
+        return program;
+    }
     let dir = version_dir(tag);
     #[cfg(target_os = "macos")]
     match crate::game_app::ensure(&dir) {
@@ -3150,7 +3171,7 @@ fn client_program(tag: &str) -> PathBuf {
 }
 
 pub fn server_command(tag: &str, folder: &Path) -> Command {
-    let mut cmd = Command::new(version_dir(tag).join(CLIENT));
+    let mut cmd = Command::new(client_program(tag));
     cmd.current_dir(folder)
         .arg("--resources")
         .arg(resources(tag))
@@ -3174,6 +3195,8 @@ pub fn agree_eula(folder: &Path) -> Result<(), String> {
 
 /// The installed version to use: the one asked for, else the selected one, else the newest.
 pub fn resolve_version(requested: Option<&str>) -> Result<String, String> {
+    // A payload-only launcher has no `versions/<tag>/` until its payload installs the stub.
+    let _ = crate::payload::prepare_for_launch();
     let installed = installed();
     if let Some(tag) = requested {
         return installed
@@ -3371,6 +3394,7 @@ pub const SIGN_IN_HINT: &str = "Sign in with `horizon-launcher account sign-in`.
 
 /// [`client`], playing as `who` for this launch only (`play --account`).
 pub fn client_as(tag: &str, who: Option<&account::Player>) -> Result<Command, String> {
+    crate::payload::prepare_for_launch()?;
     if let Some(error) = game_architecture_launch_error(tag) {
         return Err(error);
     }
@@ -3421,6 +3445,7 @@ pub fn join_friend(cmd: &mut Command, code: &str) -> Result<(), String> {
 
 /// The dedicated server's command in `folder`, once prepared and the EULA is agreed to.
 pub fn server(tag: &str, folder: &Path, accept_eula: bool) -> Result<Command, String> {
+    crate::payload::prepare_for_launch()?;
     if let Some(error) = game_architecture_launch_error(tag) {
         return Err(error);
     }

@@ -22,7 +22,7 @@ jobs:
   windows:
     if: github.repository_owner == 'lightningblade-1234' && github.ref == 'refs/heads/main'
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     permissions:
       contents: write
     env:
@@ -65,6 +65,35 @@ jobs:
           cargo +1.95.0 test --manifest-path launcher/Cargo.toml --release --locked --lib --bins --tests
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo +1.95.0 build --manifest-path launcher/Cargo.toml --release --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build the game payload
+        run: |
+          cargo +1.95.0 build --profile fast -p horizon-client -p horizon-client-lib --bin horizon-client --bin horizon-ctl -p horizon-prepare --bin horizon-prepare -p horizon-server --bin horizon-server
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force dist/payload | Out-Null
+          Copy-Item target/fast/horizon-client.exe, target/fast/horizon-ctl.exe, target/fast/horizon-prepare.exe, target/fast/horizon-server.exe, research-lock.json dist/payload/
+          launcher/target/release/horizon-launcher.exe payload pack dist/payload --sources . --tag nightly --out dist/payload.zip
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Prove the archive installs whole before it is compiled into the launcher.
+          $payloadHome = Join-Path $env:RUNNER_TEMP "payload-check"
+          New-Item -ItemType Directory -Force $payloadHome | Out-Null
+          $env:HORIZON_LAUNCHER_HOME = $payloadHome
+          launcher/target/release/horizon-launcher.exe payload install dist/payload.zip --trust-unsigned
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          launcher/target/release/horizon-launcher.exe payload verify
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Embed the payload in the launcher
+        run: |
+          $env:HORIZON_PAYLOAD_ZIP = (Resolve-Path dist/payload.zip).Path
+          cargo +1.95.0 build --manifest-path launcher/Cargo.toml --release --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # A fresh home installs the embedded copy: no versions/, no network.
+          $embeddedHome = Join-Path $env:RUNNER_TEMP "payload-embedded"
+          New-Item -ItemType Directory -Force $embeddedHome | Out-Null
+          $env:HORIZON_LAUNCHER_HOME = $embeddedHome
+          launcher/target/release/horizon-launcher.exe payload install
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          launcher/target/release/horizon-launcher.exe payload verify
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify the standalone executable
         run: |

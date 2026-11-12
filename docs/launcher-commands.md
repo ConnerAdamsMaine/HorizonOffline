@@ -55,6 +55,57 @@ Install a game program you have, such as a horizon-client built on your fork's A
 
 MCP: none: the player's switch.
 
+## `horizon-launcher payload list`
+
+List the game payloads installed here.
+
+    horizon-launcher payload list
+
+MCP: `payload_list`.
+
+## `horizon-launcher payload verify`
+
+Check installed payloads against their manifests.
+
+    horizon-launcher payload verify [KEY]
+
+- `KEY`: The payload key (default: every installed payload)
+
+MCP: `payload_verify`.
+
+## `horizon-launcher payload prune`
+
+Remove payloads other than the selected one, or the one named.
+
+    horizon-launcher payload prune
+
+- `--keep`: The payload key to keep
+
+MCP: `payload_prune`.
+
+## `horizon-launcher payload install`
+
+Install a payload archive you built or downloaded, or the payload embedded in this launcher.
+
+    horizon-launcher payload install [ARCHIVE]
+
+- `ARCHIVE`: The payload zip (payload.json and the game programs); omit to install the embedded one
+- `--trust-unsigned`: You built this payload yourself and trust it with full access to this computer
+
+MCP: `payload_install`.
+
+## `horizon-launcher payload pack`
+
+Build a payload archive from a folder holding the game programs.
+
+    horizon-launcher payload pack --tag <TAG> --out <OUT> <INPUT>
+
+- `INPUT`: The folder with horizon-client, horizon-ctl, horizon-prepare, horizon-server and research-lock.json
+- `--tag`: The version tag the payload serves
+- `--out`: Where to write the payload zip
+
+MCP: `payload_pack`.
+
 ## `horizon-launcher prepare`
 
 Prepare a version's resources from your own Minecraft install, or from Mojang.

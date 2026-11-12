@@ -11,6 +11,7 @@ use horizon_launcher::loaders;
 use horizon_launcher::native_mods;
 use horizon_launcher::native_status;
 use horizon_launcher::other_launchers;
+use horizon_launcher::payload;
 use horizon_launcher::server_list;
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -702,6 +703,46 @@ impl SourceArg {
 }
 
 #[derive(Subcommand)]
+enum PayloadCmd {
+    /// List the game payloads installed here
+    List,
+    /// Check installed payloads against their manifests
+    Verify {
+        /// The payload key (default: every installed payload)
+        key: Option<String>,
+    },
+    /// Remove payloads other than the selected one, or the one named
+    Prune {
+        /// The payload key to keep
+        #[arg(long)]
+        keep: Option<String>,
+    },
+    /// Install a payload archive you built or downloaded, or the payload embedded in this launcher
+    Install {
+        /// The payload zip (payload.json and the game programs); omit to install the embedded one
+        archive: Option<PathBuf>,
+        /// You built this payload yourself and trust it with full access to this computer
+        #[arg(long)]
+        trust_unsigned: bool,
+    },
+    /// Build a payload archive from a folder holding the game programs
+    Pack {
+        /// The folder with horizon-client, horizon-ctl, horizon-prepare, horizon-server and
+        /// research-lock.json
+        input: PathBuf,
+        /// The repository root with the Java exporter sources preparation compiles
+        #[arg(long, default_value = ".")]
+        sources: PathBuf,
+        /// The version tag the payload serves
+        #[arg(long)]
+        tag: String,
+        /// Where to write the payload zip
+        #[arg(long)]
+        out: PathBuf,
+    },
+}
+
+#[derive(Subcommand)]
 enum Cmd {
     /// Write a shell completion script to stdout
     Completions { shell: clap_complete::Shell },
@@ -728,6 +769,11 @@ enum Cmd {
         /// You picked this build yourself and trust it with full access to this computer
         #[arg(long)]
         trust_unsigned: bool,
+    },
+    /// The game payload: the programs the launcher owns and starts
+    Payload {
+        #[command(subcommand)]
+        action: PayloadCmd,
     },
     /// Prepare a version's resources from your own Minecraft install, or from Mojang
     Prepare {
@@ -1441,6 +1487,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
                 println!("Imported {tag} and selected it. Prepare it next: horizon-launcher prepare --version {tag}");
             }
         }
+        Cmd::Payload { action } => payload_command(action, as_json)?,
         Cmd::Prepare {
             minecraft,
             download,
@@ -1904,6 +1951,153 @@ fn update(check: bool, as_json: bool) -> Result<(), String> {
             } else {
                 backend::self_update(r, progress(format!("Updating the launcher to {version}")))?;
                 println!("Launcher: updated to {version}. Restart the launcher to use it.");
+            }
+        }
+    }
+    Ok(())
+}
+
+/// `payload …`: what the launcher owns and starts, independent of `versions/`.
+fn payload_command(action: PayloadCmd, as_json: bool) -> Result<(), String> {
+    let root = payload::root();
+    match action {
+        PayloadCmd::List => {
+            let all = payload::installed();
+            if as_json {
+                json(serde_json::json!({
+                    "payloads": all.iter().map(|(key, manifest, dir)| serde_json::json!({
+                        "key": key,
+                        "tag": manifest.tag,
+                        "game_version": manifest.game_version,
+                        "platform": manifest.platform,
+                        "entry": manifest.entry,
+                        "folder": dir,
+                    })).collect::<Vec<_>>(),
+                }));
+            } else if all.is_empty() {
+                println!("{}", tr("No game payload is installed."));
+            } else {
+                for (key, manifest, dir) in all {
+                    println!("{key}  {}  {}", manifest.tag, dir.display());
+                }
+            }
+        }
+        PayloadCmd::Verify { key } => {
+            let dirs: Vec<(String, PathBuf)> = match key {
+                Some(key) => vec![(key.clone(), root.join(&key))],
+                None => payload::installed()
+                    .into_iter()
+                    .map(|(key, _, dir)| (key, dir))
+                    .collect(),
+            };
+            if dirs.is_empty() {
+                return Err(tr("No game payload is installed.").into());
+            }
+            let mut verified = Vec::new();
+            for (key, dir) in dirs {
+                let manifest = payload::verify_dir(&dir)?;
+                verified.push(serde_json::json!({
+                    "key": key,
+                    "tag": manifest.tag,
+                    "folder": dir,
+                }));
+            }
+            if as_json {
+                json(serde_json::json!({ "verified": verified }));
+            } else {
+                println!(
+                    "{}",
+                    trf(
+                        "Verified {count} payload(s).",
+                        &[("count", &verified.len().to_string())],
+                    )
+                );
+            }
+        }
+        PayloadCmd::Prune { keep } => {
+            let keep = keep.or_else(|| {
+                payload::choose(&root, backend::Settings::load().selected.as_deref())
+                    .map(|(manifest, _)| manifest.key)
+            });
+            let removed = payload::prune(&root, keep.as_deref());
+            if as_json {
+                json(serde_json::json!({ "removed": removed, "kept": keep }));
+            } else if removed.is_empty() {
+                println!("{}", tr("No payload needed pruning."));
+            } else {
+                for key in removed {
+                    println!("{}", trf("Removed payload {key}.", &[("key", &key)]));
+                }
+            }
+        }
+        PayloadCmd::Install {
+            archive,
+            trust_unsigned,
+        } => {
+            let (manifest, dir) = match archive {
+                Some(archive) => {
+                    if !trust_unsigned {
+                        return Err(tr(
+                            "A payload archive runs with your rights, and nothing signed it. If you trust it, pass --trust-unsigned.",
+                        )
+                        .into());
+                    }
+                    let file = std::fs::File::open(&archive).map_err(|e| {
+                        trf(
+                            "Could not open {path}: {error}",
+                            &[
+                                ("path", &archive.display().to_string()),
+                                ("error", &e.to_string()),
+                            ],
+                        )
+                    })?;
+                    payload::install(&root, file)?
+                }
+                None => payload::install_embedded()?
+                    .ok_or_else(|| tr("This launcher carries no game payload.").to_string())?,
+            };
+            payload::ensure_version(&manifest)?;
+            if as_json {
+                json(serde_json::json!({
+                    "key": manifest.key, "tag": manifest.tag, "folder": dir,
+                }));
+            } else {
+                println!(
+                    "{}",
+                    trf(
+                        "Installed payload {key} for {tag} at {folder}.",
+                        &[
+                            ("key", &manifest.key),
+                            ("tag", &manifest.tag),
+                            ("folder", &dir.display().to_string()),
+                        ],
+                    )
+                );
+            }
+        }
+        PayloadCmd::Pack {
+            input,
+            sources,
+            tag,
+            out,
+        } => {
+            let manifest = payload::pack(&input, &sources, &tag, &out)?;
+            if as_json {
+                json(serde_json::json!({
+                    "key": manifest.key, "tag": manifest.tag, "out": out,
+                }));
+            } else {
+                println!(
+                    "{}",
+                    trf(
+                        "Wrote payload {key} for {tag} to {out}.",
+                        &[
+                            ("key", &manifest.key),
+                            ("tag", &manifest.tag),
+                            ("out", &out.display().to_string()),
+                        ],
+                    )
+                );
             }
         }
     }

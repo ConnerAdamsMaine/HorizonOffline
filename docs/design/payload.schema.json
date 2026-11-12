@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://playhorizon.dev/schema/payload-1.json",
+  "title": "Horizon payload manifest",
+  "description": "payload.json: what a Horizon payload contains, the hash of every file, and the program to start. Design and rules: docs/design/centralized-launcher.md. 'entry' must name one of 'files'. The JSON Schema cannot express that, so it is checked by the reader.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "key",
+    "tag",
+    "game_version",
+    "mod_api_level",
+    "platform",
+    "entry",
+    "files",
+    "preparer_output_version"
+  ],
+  "properties": {
+    "schema": {
+      "const": 1,
+      "description": "Manifest format. A reader refuses a higher number; bump it only for an incompatible change."
+    },
+    "key": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$",
+      "description": "First 16 hex characters of sha256 over the canonical manifest bytes with 'key' omitted. The payload folder is named after it."
+    },
+    "tag": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The version tag the payload was built for, e.g. 'nightly'. Informational."
+    },
+    "game_version": {
+      "type": "string",
+      "pattern": "^[0-9]+(\\.[0-9]+)+$",
+      "description": "The Minecraft version, '26.3' today. A payload for another version is not installed."
+    },
+    "mod_api_level": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Must equal the mark horizon_mods::api_level::MARK carries in the entry program; a mismatch is an error."
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "x86_64-pc-windows-msvc",
+        "aarch64-pc-windows-msvc",
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "x86_64-unknown-linux-musl"
+      ],
+      "description": "The Rust target triple of every file. A launcher refuses another platform's payload."
+    },
+    "entry": {
+      "type": "string",
+      "description": "The game program, one of 'files'. Read by the launcher for mod_api_level and started for Play."
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "preparer_output_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "OUTPUT_VERSION of horizon-prepare (crates/horizon-prepare/src/lib.rs), which decides whether a player's prepared resources still fit."
+    }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "size", "exec"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$))[A-Za-z0-9._+][A-Za-z0-9._+\\-/]*$",
+          "description": "Relative, forward slashes, no absolute path, no '..' segment, no drive or scheme colon, unique in 'files'."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "exec": {
+          "type": "boolean",
+          "description": "Executable bit on Unix; ignored on Windows."
+        }
+      }
+    }
+  }
+}

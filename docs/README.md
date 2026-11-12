@@ -73,6 +73,7 @@ To play, use [the launcher](../launcher/README.md); the project site is [playhor
 - [Live mod reloading](design/mod-hotload.md): loading, enabling and updating mods from inside the game without a restart.
 - [Mod registry v2](design/registry-v2.md): project kinds, metadata, installation locations and the registry rollout.
 - [Shared audio output](design/shared-audio.md): sound engines on one output, listener ownership and duplicate world-sound handling.
+- [One-file launcher with a per-user game payload](design/centralized-launcher.md): one download that carries the game, the per-user payload folder and its manifest, why an in-process `game.dll` is the costly way to get it, and the order to build it in.
 
 ## Architecture: world generation
 

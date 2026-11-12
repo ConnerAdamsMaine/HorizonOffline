@@ -37,6 +37,7 @@ pub mod native_status;
 pub mod nightly;
 pub mod other_launchers;
 pub mod packs;
+pub mod payload;
 pub mod pictures;
 pub mod private_window;
 pub mod process;

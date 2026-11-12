@@ -9,8 +9,24 @@
 This build has no Microsoft sign-in at all: there is no account to create and no browser step.
 The name typed in **Home** is the whole identity, and the same name keeps the same offline UUID.
 Running the released launcher needs no Rust, Visual Studio or source checkout.
-The release contains only the launcher and license/setup notices. Minecraft JARs, assets and
-prepared game files are never distributed with it.
+The release contains the launcher, the Horizon game programs, and license/setup notices. Minecraft
+JARs, assets and prepared game files are never distributed with it.
+
+The game programs travel inside the launcher as a payload. On first play the launcher extracts them
+once into its data folder under `payload/<key>/`, verifies every file against the payload manifest,
+and starts the program the manifest names. The folder is read-only afterwards. A damaged payload is
+replaced from the launcher's embedded copy, and a new build gets a new key instead of overwriting the
+old folder. Useful commands:
+
+```powershell
+horizon-launcher.exe payload list
+horizon-launcher.exe payload verify
+horizon-launcher.exe payload prune
+horizon-launcher.exe payload install <payload.zip> --trust-unsigned
+```
+
+`payload install` with no archive installs the copy embedded in the launcher. Installing an archive
+you built or downloaded requires `--trust-unsigned`, because nothing has signed it yet.
 
 Runtime prerequisites are set up automatically in the normal launcher, without PowerShell or
 a source checkout. It installs/selects a Horizon build, reuses local Java or obtains managed

@@ -12,4 +12,17 @@ fn main() {
             panic!("embedding {ico}: {e}");
         }
     }
+    // The payload archive is compiled into the launcher (HORIZON_PAYLOAD_ZIP). Without one,
+    // an empty file keeps `include_bytes!` valid and `payload::embedded()` says there is none.
+    let out = std::env::var("OUT_DIR").expect("cargo gives OUT_DIR");
+    let target = format!("{out}/payload.zip");
+    println!("cargo:rerun-if-env-changed=HORIZON_PAYLOAD_ZIP");
+    match std::env::var_os("HORIZON_PAYLOAD_ZIP").filter(|path| !path.is_empty()) {
+        Some(path) => {
+            println!("cargo:rerun-if-changed={}", path.to_string_lossy());
+            std::fs::copy(&path, &target)
+                .unwrap_or_else(|e| panic!("copying {}: {e}", path.to_string_lossy()));
+        }
+        None => std::fs::write(&target, b"").expect("writing the empty payload marker"),
+    }
 }
