@@ -11,7 +11,8 @@ fn scratch(name: &str) -> PathBuf {
 const T0: u64 = 1_800_000_000;
 const LATER: u64 = T0 + FRESH_SECS;
 
-const RELEASES: &str = "https://api.github.com/repos/ConnerAdamsMaine/HorizonOffline/releases?per_page=100";
+const RELEASES: &str =
+    "https://api.github.com/repos/ConnerAdamsMaine/HorizonOffline/releases?per_page=100";
 
 fn list(tag: &str) -> serde_json::Value {
     serde_json::json!([{ "tag_name": tag }])
@@ -41,7 +42,10 @@ fn mirror_serves_only_horizons_repository() {
         None
     );
     assert_eq!(
-        mirror_url_with("https://github.com/ConnerAdamsMaine/HorizonOffline/releases", base),
+        mirror_url_with(
+            "https://github.com/ConnerAdamsMaine/HorizonOffline/releases",
+            base
+        ),
         None
     );
     assert_eq!(

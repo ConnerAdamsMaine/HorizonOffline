@@ -414,7 +414,7 @@ impl Autosaves {
         match write_snapshot(snapshot) {
             Ok(player) => self.ready.push(player),
             Err(error) => {
-                log::warn!("Horizon: {error}");
+                log::error!("Horizon: player autosave: {error}");
                 self.error = Some(error);
             }
         }
@@ -445,7 +445,7 @@ impl Autosaves {
                     match result {
                         Ok(player) => saved.push(player),
                         Err(error) => {
-                            log::warn!("Horizon: {error}");
+                            log::error!("Horizon: player autosave: {error}");
                             self.error = Some(error);
                         }
                     }
@@ -453,7 +453,7 @@ impl Autosaves {
                 Err(std::sync::mpsc::TryRecvError::Empty) => break,
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                     self.error = Some("the player writer stopped".into());
-                    log::warn!("Horizon: the player writer stopped");
+                    log::error!("Horizon: the player writer stopped with autosaves pending");
                     self.pending = 0;
                     if let Some(writer) = self.writer.take() {
                         drop(writer.send);
@@ -475,9 +475,13 @@ impl Autosaves {
 
 impl Drop for Autosaves {
     fn drop(&mut self) {
+        // Receive write failures before dropping the completion channel on shutdown.
+        self.completed(true);
         if let Some(writer) = self.writer.take() {
             drop(writer.send);
-            let _ = writer.thread.join();
+            if writer.thread.join().is_err() {
+                log::error!("Horizon: the player writer panicked during shutdown");
+            }
         }
     }
 }

@@ -1,0 +1,68 @@
+name: benchmarks
+
+# Four tiers (docs/benchmark-suite.md, "Tiers"). Tier 1 is cheap and runs on every change that can
+# affect the suite. Tiers 2 and 3 need a game, the prepared vanilla data and a GPU: they run on the
+# repository's game runner, nightly and on request. Tier 4 (soaks, 2000-entity and extreme redstone
+# workloads) runs only when asked, because it takes tens of minutes and heats the machine.
+on:
+  pull_request:
+    paths:
+      - "crates/horizon-bench/**"
+      - "tools/gameplay_bench.py"
+      - "tools/perf_bench.py"
+      - "tools/bench_tiers.py"
+      - "tools/cargo_build.py"
+      - "tests/test_gameplay_bench.py"
+      - "tests/test_perf_bench.py"
+      - "tests/test_cargo_build.py"
+      - "benchmarks/gameplay/**"
+      - "docs/benchmark-suite.md"
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: Tier to run on the game runner (2, 3 or 4)
+        type: choice
+        options: ["2", "3", "4"]
+        default: "3"
+
+permissions:
+  contents: read
+env:
+  HORIZON_TELEMETRY_URL: "off"
+
+jobs:
+  tier1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python3 tools/bench_tiers.py --tier 1
+
+  tier2-3:
+    if: github.event_name != 'pull_request'
+    runs-on: [self-hosted, linux, horizon-game]
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the production-equivalent benchmark profile
+        run: python3 tools/cargo_build.py --profile bench
+      - name: Run the requested tier
+        env:
+          TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.tier || '3' }}
+        run: python3 tools/bench_tiers.py --tier "$TIER" --build target/release
+      - name: Keep the raw and aggregate reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-reports
+          path: benchmarks/gameplay/*.json
+          if-no-files-found: ignore
+          retention-days: 14

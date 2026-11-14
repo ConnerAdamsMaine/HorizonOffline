@@ -37,7 +37,8 @@ kilobytes whatever the frame rate. Measured numbers are rounded to 3 decimals.
       "phase": "village", "repeat": 0, "frames": 4920, "seconds": 12.0,
       "avg_fps": 410.0, "low_1pct_fps": 120.3, "low_01pct_fps": 61.0,
       "p50_ms": 2.31, "p95_ms": 3.8, "p99_ms": 6.9, "p999_ms": 14.2, "max_ms": 21.0,
-      "cpu_p50_ms": 1.4, "gpu_p50_ms": 1.9,
+      "cpu_p50_ms": 1.4, "cpu_p99_ms": 2.1, "gpu_p50_ms": 1.9, "gpu_p99_ms": 3.0,
+      "gpu_wait_p50_ms": 0.9,
       "histogram": [0, 0, 3011, 1520, 301, 62, 15, 7, 3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     }
   ]
@@ -90,6 +91,9 @@ confidence interval of the mean, Student's t, null when `n` is 1). The unit is t
 | `memory.gpu_mb`, `memory.<phase>.gpu_mb` | video memory the game allocated (or NVIDIA attributes to it), where readable |
 | `memory.<phase>.rss_mb` | resident memory, median over that phase's flight (perf_bench) |
 | `cpu.<phase>.p50_ms` | median CPU time of a frame (the frame minus its waits for the GPU, the display and the limiter; Horizon only) |
+| `cpu.<phase>.p99_ms` | 99th-percentile CPU time of a frame (same definition; Horizon only) |
+| `gpu.<phase>.p99_ms` | 99th-percentile GPU time of a frame, where timestamp queries exist |
+| `gpu_wait.<phase>.p50_ms` | median frame time minus CPU time: waiting for the GPU, the display or the limiter |
 | `tick.<phase>.client_ms` | mean time of one client tick during the phase (vanilla: `Minecraft.tick`; Horizon: the frames' tick phase over the ticks run) |
 | `gpu_pass.<phase>.<pass>_ms` | GPU time of one of the game's render passes (`world`, `world_after_culling`, `occlusion_test`, `hud`...), the median of the last 15 timed frames in the 2 s before the flight, at its start; the flight itself is not timed per pass. Not on Metal, where passes overlap |
 | `power.package_w`, `power.battery_drain_pct` | power draw, battery used per hour (laptops; planned) |
@@ -108,7 +112,7 @@ New names can be added without a new version; the table lists the ones the tools
 **`frames`.** One entry per measured phase and repeat (a scene's flight, the launcher's page switching):
 `phase`, `repeat`, `frames`, `seconds`, `avg_fps`, `low_1pct_fps` and `low_01pct_fps` (the average frame
 time of the slowest 1% or 0.1% of frames, as FPS), `p50_ms`, `p95_ms`, `p99_ms`, `p999_ms`, `max_ms`,
-`cpu_p50_ms` and `gpu_p50_ms` when measured, and `histogram`: frame counts per bucket. The bucket edges
+`cpu_p50_ms`, `cpu_p99_ms`, `gpu_p50_ms`, `gpu_p99_ms` and `gpu_wait_p50_ms` when measured, and `histogram`: frame counts per bucket. `gpu_wait_p50_ms` is the median of frame time minus CPU time; a large value next to a small `cpu_p50_ms` means the CPU was not the bottleneck. The bucket edges
 are fixed by the version, so histograms from any number of reports add up:
 
     0, 1, 2, 3, 4.17, 5, 6, 7, 8.33, 10, 12, 14, 16.67, 20, 25, 33.33, 40, 50, 66.67, 100, 150, 250, 500, 1000 ms

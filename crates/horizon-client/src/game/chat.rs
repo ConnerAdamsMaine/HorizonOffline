@@ -453,7 +453,7 @@ mod hud_mode_tests {
 }
 
 /// The ids `build_registries` lists from the prepared resources' folders.
-/// The folders don't change while the game runs, so each root is read once
+/// The folders don't change while the game runs, so each root is cached
 /// instead of at every world opening (thousands of files).
 struct ResourceIds {
     recipes: Vec<String>,
@@ -469,6 +469,8 @@ struct ResourceIds {
     markers: Vec<(String, TimeMarker)>,
 }
 static RESOURCE_IDS: Mutex<Vec<(PathBuf, Arc<ResourceIds>)>> = Mutex::new(Vec::new());
+// Pack reloads can change the root; evicted values remain valid through their callers' Arcs.
+const REGISTRY_CACHE_ENTRIES: usize = 8;
 
 /// The `minecraft:` ids of the `.json` files directly in `dir`, sorted.
 fn json_ids_in(dir: &Path) -> Vec<String> {
@@ -557,6 +559,9 @@ fn resource_ids(root: &Path) -> Arc<ResourceIds> {
         timelines,
         markers,
     });
+    if cache.len() == REGISTRY_CACHE_ENTRIES {
+        cache.remove(0);
+    }
     cache.push((root.to_owned(), ids.clone()));
     ids
 }
@@ -565,10 +570,11 @@ fn resource_ids(root: &Path) -> Arc<ResourceIds> {
 type BlockProperties = BTreeMap<String, Vec<(String, Vec<String>)>>;
 static BLOCK_PROPERTIES: Mutex<Vec<(usize, Arc<BlockProperties>)>> = Mutex::new(Vec::new());
 
-/// `BlockProperties` of a block registry, listed once: a registry never
+/// `BlockProperties` of a block registry: a registry never
 /// changes once built, and walking its tens of thousands of states took
 /// about 30 ms of every world opening.
 fn block_properties(registry: &'static BlockRegistry) -> Arc<BlockProperties> {
+    // Assets::load leaks the immutable registry; reloads reuse it, so pointer keys cannot alias.
     let key = std::ptr::from_ref(registry) as usize;
     let mut cache = BLOCK_PROPERTIES.lock().unwrap_or_else(|e| e.into_inner());
     if let Some((_, properties)) = cache.iter().find(|(cached, _)| *cached == key) {
@@ -593,6 +599,9 @@ fn block_properties(registry: &'static BlockRegistry) -> Arc<BlockProperties> {
             .map(|(k, v)| (k, v.into_iter().collect()))
             .collect(),
     );
+    if cache.len() == REGISTRY_CACHE_ENTRIES {
+        cache.remove(0);
+    }
     cache.push((key, properties.clone()));
     properties
 }
@@ -600,7 +609,7 @@ fn block_properties(registry: &'static BlockRegistry) -> Arc<BlockProperties> {
 static COMMAND_EXPORTS: Mutex<Vec<(PathBuf, Option<Arc<Registries>>)>> = Mutex::new(Vec::new());
 
 /// What the registries take from a folder's `command-registries.json`
-/// (vanilla's built-in registries), read once like the resource ids: parsing
+/// (vanilla's built-in registries), cached like the resource ids: parsing
 /// its 1.6 MB again took about 15 ms of every world opening. Only the part
 /// the registries fill from stays, not the parsed export (4.2 MB, against
 /// 2.2 MB). A dedicated server opens its world once and keeps nothing.
@@ -614,6 +623,9 @@ fn command_export(dir: &Path, keep: bool) -> Option<Arc<Registries>> {
         .and_then(|bytes| serde_json::from_slice(&bytes).ok())
         .map(|export| Arc::new(Registries::from_export(&export)));
     if keep {
+        if cache.len() == REGISTRY_CACHE_ENTRIES {
+            cache.remove(0);
+        }
         cache.push((dir.to_owned(), export.clone()));
     }
     export
@@ -2191,6 +2203,35 @@ mod tests {
         assert_eq!(once.effects, ["b"]);
         assert!(!Arc::ptr_eq(&once, &command_export(&other, false).unwrap()));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn resource_caches_bound_roots_and_keep_evicted_readers_valid() {
+        let dir =
+            std::env::temp_dir().join(format!("horizon-cache-eviction-{}", std::process::id()));
+        let mut first = None;
+        for i in 0..=REGISTRY_CACHE_ENTRIES {
+            let root = dir.join(i.to_string());
+            std::fs::create_dir_all(root.join("data/minecraft/recipe")).unwrap();
+            std::fs::write(root.join("data/minecraft/recipe/stick.json"), "{}").unwrap();
+            std::fs::write(root.join("command-registries.json"), r#"{"effects":["a"]}"#).unwrap();
+            let ids = resource_ids(&root);
+            let export = command_export(&root, true).unwrap();
+            if i == 0 {
+                first = Some((ids, export));
+            }
+        }
+        let (ids, export) = first.unwrap();
+        assert_eq!(ids.recipes, ["minecraft:stick"]);
+        assert_eq!(export.effects, ["a"]);
+        assert!(!Arc::ptr_eq(&ids, &resource_ids(&dir.join("0"))));
+        assert!(!Arc::ptr_eq(
+            &export,
+            &command_export(&dir.join("0"), true).unwrap()
+        ));
+        assert!(RESOURCE_IDS.lock().unwrap().len() <= REGISTRY_CACHE_ENTRIES);
+        assert!(COMMAND_EXPORTS.lock().unwrap().len() <= REGISTRY_CACHE_ENTRIES);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     /// A native mod's command is in the tree the chat box uses (#456): known

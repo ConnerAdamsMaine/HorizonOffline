@@ -8,8 +8,22 @@ struct Temp(PathBuf);
 impl Temp {
     fn new() -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
+        let parent = checked_path(&fs::canonicalize(std::env::temp_dir()).unwrap()).unwrap();
+        // Migration needs a real build path MinGW can use, even when %TEMP% contains spaces.
+        #[cfg(windows)]
+        let parent = if tool_safe(&parent).is_ok() {
+            parent
+        } else {
+            checked_path(
+                &std::env::var_os("ProgramData")
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData")),
+            )
+            .unwrap()
+        };
+        tool_safe(&parent).expect("migration fixtures need an ASCII path without spaces");
         loop {
-            let path = std::env::temp_dir().join(format!(
+            let path = parent.join(format!(
                 "horizon-location-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
@@ -199,6 +213,19 @@ fn nonempty_destination_preserves_pointer_and_contents() {
     fs::write(f.target().join("sentinel"), b"keep").unwrap();
     assert!(f.refuse(&f.target()).contains("empty folder"));
     assert_eq!(fs::read(f.target().join("sentinel")).unwrap(), b"keep");
+}
+
+#[cfg(windows)]
+#[test]
+fn unsafe_build_destinations_preserve_pointer_and_contents() {
+    let f = Fixture::new("build");
+    for name in ["has spaces", "données"] {
+        let target = f.temp.0.join(name);
+        assert!(f
+            .refuse(&target)
+            .contains("only ASCII characters and no spaces"));
+        assert!(!target.exists());
+    }
 }
 
 #[test]

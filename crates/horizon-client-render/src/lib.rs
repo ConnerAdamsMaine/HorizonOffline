@@ -1,6 +1,10 @@
 //! The client's world data, rendering and screens: chunks, meshing, light, streaming, the renderer,
 //! the HUD, menus and settings. Gameplay (horizon-client) builds on it; nothing here reaches gameplay.
 #![forbid(unsafe_code)]
+// `gfx::cull::Cull::submitted` returns an `impl FnOnce() + Send` closure over wgpu buffers; proving
+// `Send` walks wgpu-core's deeply nested `Arc`/lock/storage types and overruns the default limit with
+// the compiler's `recursion-depth-exceeding-limit` lint. The bound is genuine, the depth is not ours.
+#![recursion_limit = "256"]
 pub mod assets;
 pub mod atlas_sources;
 pub mod audio;

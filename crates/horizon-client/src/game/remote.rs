@@ -60,8 +60,9 @@ use winit::{event::MouseButton, keyboard::KeyCode};
 
 type BuiltinCache = Vec<(std::path::PathBuf, Arc<Builtin>)>;
 static BUILTIN: std::sync::Mutex<BuiltinCache> = std::sync::Mutex::new(Vec::new());
+const BUILTIN_CACHE_ROOTS: usize = 8;
 
-/// The prepared resources' `registries.json`, parsed once per root: the
+/// The prepared resources' `registries.json`, cached per root: the
 /// file never changes while the game runs, and parsing it took about 3 ms
 /// of the frame that joins a server (or opens a single-player world).
 /// `None` when it is missing or invalid (not cached: a fixed install can
@@ -72,6 +73,10 @@ pub(super) fn builtin_registries(root: &std::path::Path) -> Option<Arc<Builtin>>
         return Some(builtin.clone());
     }
     let builtin = Arc::new(Builtin::find(root).and_then(|p| Builtin::load(&p).ok())?);
+    // Pack selections create distinct roots. Connections retain their own Arc after eviction.
+    if cache.len() == BUILTIN_CACHE_ROOTS {
+        cache.remove(0);
+    }
     cache.push((root.to_owned(), builtin.clone()));
     Some(builtin)
 }

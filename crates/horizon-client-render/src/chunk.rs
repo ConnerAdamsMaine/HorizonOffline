@@ -294,6 +294,8 @@ pub fn set_block_states(states: usize) {
 /// full sky light above the terrain. Edits copy them (`Arc::make_mut`).
 type SharedSections = std::collections::HashMap<(u32, u32, u8), Arc<Section>>;
 static SHARED: std::sync::Mutex<Option<SharedSections>> = std::sync::Mutex::new(None);
+// Sharing is optional; retain at most this many combinations until set_block_states clears them.
+const SHARED_SECTION_LIMIT: usize = 4096;
 
 /// Replaces the uniform sections of `sections` with the shared ones.
 pub fn share_uniform(sections: &mut [Arc<Section>]) {
@@ -314,9 +316,12 @@ pub fn share_uniform(sections: &mut [Arc<Section>]) {
         let Some(k) = key(section) else {
             continue;
         };
-        let one = shared.entry(k).or_insert_with(|| section.clone());
-        if !Arc::ptr_eq(one, section) {
-            *section = one.clone();
+        if let Some(one) = shared.get(&k) {
+            if !Arc::ptr_eq(one, section) {
+                *section = one.clone();
+            }
+        } else if shared.len() < SHARED_SECTION_LIMIT {
+            shared.insert(k, section.clone());
         }
     }
 }

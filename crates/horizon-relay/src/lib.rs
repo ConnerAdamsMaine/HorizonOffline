@@ -819,24 +819,52 @@ fn bridge(
             let _ = horizon_friends::set_tcp_keepalive(s);
         }
         let (g, h, st) = (guest.try_clone()?, host.try_clone()?, state.clone());
+        let stopped = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let up_stopped = stopped.clone();
         let up = std::thread::Builder::new()
             .name("relay-copy".into())
-            .spawn(move || copy(&st, g, h))?;
-        copy(state, host, guest);
+            .spawn(move || copy(&st, g, h, &up_stopped))?;
+        copy(state, host, guest, &stopped);
         let _ = up.join();
         Ok(())
     })()
 }
 
-fn copy(state: &State, mut from: TcpStream, mut to: TcpStream) {
+fn copy(
+    state: &State,
+    mut from: TcpStream,
+    mut to: TcpStream,
+    stopped: &std::sync::atomic::AtomicBool,
+) {
+    use std::sync::atomic::Ordering;
     let rate = state.config.session_rate;
     let mut bucket = Bucket::new(rate, (rate / 2.0).max(16384.0), Instant::now());
     let mut buf = [0u8; 16 * 1024];
+    // Poll well below a bridge's expected lifetime; the read timeout still enforces `idle`.
+    let poll = state.config.idle.min(std::time::Duration::from_millis(250));
+    let _ = from.set_read_timeout(Some(poll));
+    let mut last = Instant::now();
     loop {
+        if stopped.load(Ordering::Relaxed) {
+            break;
+        }
         let n = match from.read(&mut buf) {
-            Ok(0) | Err(_) => break,
+            Ok(0) => break,
             Ok(n) => n,
+            Err(e)
+                if matches!(
+                    e.kind(),
+                    std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                ) =>
+            {
+                if last.elapsed() >= state.config.idle {
+                    break;
+                }
+                continue;
+            }
+            Err(_) => break,
         };
+        last = Instant::now();
         let now = Instant::now();
         let wait = bucket
             .take(n as f64, now)
@@ -849,6 +877,7 @@ fn copy(state: &State, mut from: TcpStream, mut to: TcpStream) {
         }
         state.relayed_bytes.fetch_add(n as u64, Ordering::Relaxed);
     }
+    stopped.store(true, Ordering::Relaxed);
     let _ = from.shutdown(Shutdown::Both);
     let _ = to.shutdown(Shutdown::Both);
 }

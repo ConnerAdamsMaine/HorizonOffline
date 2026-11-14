@@ -101,6 +101,7 @@ Build a payload archive from a folder holding the game programs.
     horizon-launcher payload pack --tag <TAG> --out <OUT> <INPUT>
 
 - `INPUT`: The folder with horizon-client, horizon-ctl, horizon-prepare, horizon-server and research-lock.json
+- `--sources`: The repository root with the Java exporter sources preparation compiles
 - `--tag`: The version tag the payload serves
 - `--out`: Where to write the payload zip
 

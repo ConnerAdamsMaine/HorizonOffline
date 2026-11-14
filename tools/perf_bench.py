@@ -174,9 +174,15 @@ def frames(phase, repeat, frame_ms, cpu_ms=(), gpu_ms=()):
         "p50_ms": rnd(pct(times, 0.5)), "p95_ms": rnd(pct(times, 0.95)), "p99_ms": rnd(pct(times, 0.99)),
         "p999_ms": rnd(pct(times, 0.999)), "max_ms": rnd(times[-1]),
     }
-    for key, values in (("cpu_p50_ms", cpu_ms), ("gpu_p50_ms", gpu_ms)):
+    for key, values in (("cpu_p50_ms", cpu_ms), ("cpu_p99_ms", cpu_ms),
+                        ("gpu_p50_ms", gpu_ms), ("gpu_p99_ms", gpu_ms)):
         if values:
-            entry[key] = rnd(pct(sorted(values), 0.5))
+            entry[key] = rnd(pct(sorted(values), 0.5 if "p50" in key else 0.99))
+    if cpu_ms:
+        raw = [t for t in frame_ms if math.isfinite(t)]
+        waits = [t - c for t, c in zip(raw, cpu_ms) if math.isfinite(t - c)]
+        if waits:
+            entry["gpu_wait_p50_ms"] = rnd(pct(sorted(waits), 0.5))
     entry["histogram"] = histogram
     return entry
 

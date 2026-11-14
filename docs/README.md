@@ -10,6 +10,7 @@ To play, use [the launcher](../launcher/README.md); the project site is [playhor
 - [Resource preparation and filesystem work](prepare-performance.md): shared asset indexes, verified imports, staging and filesystem work that reduce preparation time.
 - [Build from source](../README.md#build-from-source): your own copy of the game, resource preparation, `cargo run`.
 - [Build times](build-times.md): `tools/build_times.py` measures cold and incremental builds per crate and the critical path, writes a JSON report and a table, and compares two reports; the first numbers, Windows and Linux.
+- [Build profiles](build-profiles.md): `dev`, `fast`, `release`, `bench` and opt-in `release-max`; what each LTO/codegen-unit setting costs in memory, and `tools/cargo_build.py`'s resource-aware job count using available physical memory.
 - [Native client](native-client.md): options, controls, the dedicated server, `horizon-ctl` scripting, packaging, architecture.
 - [Controllers](controllers.md): playing with PlayStation, Xbox and Nintendo Switch Pro controllers, Steam Deck built-in controls, analog movement, and the input layer.
 - [Host a server](hosting.md): install `horizon-server`, prepare the game files, first run, `server.toml`, the commands, the web panel, backups, services and Docker; what works today and what doesn't yet.
@@ -26,6 +27,8 @@ To play, use [the launcher](../launcher/README.md); the project site is [playhor
 - [Graphics](graphics.md): the graphics settings screen (pages, search, descriptions), the graphics benchmark and what it measured.
 - [Server against Pumpkin](performance/server-vs-pumpkin.md): Horizon's server and Pumpkin (Rust) under the same bots at 0, 20, 60 and 100 players: tick time, CPU, memory, chunks, join; where Horizon loses, and how to run it again.
 - [Benchmark](benchmark.md): Horizon against vanilla 26.3 and vanilla with performance mods, on the same machine, world, path and settings: what is measured, how it is kept fair, how to reproduce it.
+- [Gameplay benchmark suite](benchmark-suite.md): automated walking, mining, crafting, combat, redstone, entity, world-loading and soak scenarios with warm-up/measurement/cooldown phases, five repeats, raw samples, statistics, contamination detection and correctness checks; the `horizon-benchmark-suite` v2 format, noise-aware comparisons and tiers.
+- [Audit and baseline](audit/README.md): the architecture, history, benchmark, profiling and build audit, the qualified multi-repeat baseline, verification commands and the remediation backlog. Phase 2 adds [qualification](audit/benchmark-qualification.md), [profiling](audit/profiling.md) and [build validation](audit/build-validation.md).
 - [Extras](extras.md): optional zoom, minimap, FPS and keystroke overlays and auto-reconnect, all off by default.
 - [PvP & HUD](pvp.md): optional client settings for PvP players (custom crosshair, block outline, hit color, HUD widgets), fair-play boundaries, and why each is off by default.
 - [Cosmetics](cosmetics.md): wearable items drawn only by Horizon clients (hats, back items, shoulder pets, name tag styles), with no gameplay effect, client-side visibility toggles and the JSON item format.

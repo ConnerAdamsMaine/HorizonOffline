@@ -1,0 +1,1431 @@
+{
+  "format": "horizon-benchmark-suite",
+  "version": 1,
+  "created": "2026-11-12T06:58:25Z",
+  "label": "baseline-eb1e547",
+  "run": {
+    "commit": "eb1e54725ce50aa42c4dc0f585a73db95786367a",
+    "dirty": true,
+    "profile": "release",
+    "rustc": "rustc 1.100.0-nightly (f7575a9da 2026-09-24)",
+    "features": [],
+    "command": [
+      "tools/gameplay_bench.py",
+      "--build",
+      "target/release",
+      "--render-distance",
+      "12",
+      "--seconds",
+      "8",
+      "--label",
+      "baseline-eb1e547",
+      "--out-dir",
+      "benchmarks/gameplay"
+    ]
+  },
+  "hardware": {
+    "os": "windows",
+    "os_version": "10.0.19045",
+    "arch": "AMD64",
+    "cpu": "Intel64 Family 6 Model 158 Stepping 10, GenuineIntel",
+    "cpu_threads": 12,
+    "ram_mb": 48866,
+    "gpu": {
+      "name": "Quadro P2000",
+      "vendor": "nvidia",
+      "driver": "NVIDIA 582.78",
+      "backend": "vulkan",
+      "kind": "discrete"
+    },
+    "display": {
+      "width": 1920,
+      "height": 1080,
+      "scale": 1.25,
+      "refresh_hz": 60
+    }
+  },
+  "scenarios": [
+    {
+      "name": "idle",
+      "category": "renderer",
+      "seconds": 8.0,
+      "repeats": 1,
+      "samples": {
+        "render.avg_fps": [
+          308.165
+        ],
+        "render.low_1pct_fps": [
+          172.812
+        ],
+        "render.low_01pct_fps": [
+          131.47
+        ],
+        "render.p50_ms": [
+          3.074
+        ],
+        "render.p95_ms": [
+          4.58
+        ],
+        "render.p99_ms": [
+          5.253
+        ],
+        "render.p999_ms": [
+          6.398
+        ],
+        "render.max_ms": [
+          9.64
+        ],
+        "render.frames": [
+          2466.0
+        ],
+        "render.cpu_p50_ms": [
+          1.123
+        ],
+        "render.cpu_p99_ms": [
+          4.692
+        ],
+        "render.gpu_p50_ms": [
+          2.672
+        ],
+        "render.gpu_p99_ms": [
+          2.846
+        ],
+        "render.gpu_wait_p50_ms": [
+          1.77
+        ],
+        "run.wall_s": [
+          8.023
+        ],
+        "tick.tps": [
+          19.942
+        ],
+        "tick.mspt": [
+          8.139
+        ],
+        "tick.mspt_max": [
+          10.74
+        ],
+        "tick.client_ms": [
+          0.796
+        ],
+        "process.rss_peak_mb": [
+          815.5
+        ],
+        "process.rss_steady_mb": [
+          759.652
+        ],
+        "process.rss_samples": [
+          16.0
+        ],
+        "process.cpu_cores_used": [
+          1.392
+        ],
+        "process.cpu_seconds": [
+          11.172
+        ]
+      },
+      "checks": [
+        {
+          "name": "frames drawn",
+          "expected": "> 10",
+          "actual": "2466",
+          "passed": true
+        },
+        {
+          "name": "ticks advanced",
+          "expected": "> 1",
+          "actual": "159.5",
+          "passed": true
+        },
+        {
+          "name": "tick rate plausible",
+          "expected": "> 5 tps",
+          "actual": "19.942",
+          "passed": true
+        }
+      ],
+      "frames": [
+        {
+          "phase": "idle",
+          "repeat": 0,
+          "frames": 2466,
+          "seconds": 8.002,
+          "avg_fps": 308.165,
+          "low_1pct_fps": 172.812,
+          "low_01pct_fps": 131.47,
+          "p50_ms": 3.074,
+          "p95_ms": 4.58,
+          "p99_ms": 5.253,
+          "p999_ms": 6.398,
+          "max_ms": 9.64,
+          "cpu_p50_ms": 1.123,
+          "cpu_p99_ms": 4.692,
+          "gpu_p50_ms": 2.672,
+          "gpu_p99_ms": 2.846,
+          "gpu_wait_p50_ms": 1.77,
+          "histogram": [
+            2,
+            68,
+            1051,
+            947,
+            360,
+            33,
+            4,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "notes": [
+        "stationary camera; the baseline every other scenario is compared with"
+      ],
+      "valid": true
+    },
+    {
+      "name": "walk",
+      "category": "gameplay",
+      "seconds": 8.0,
+      "repeats": 1,
+      "samples": {
+        "play.action_s": [
+          2.021
+        ],
+        "play.distance_blocks": [
+          16.883
+        ],
+        "play.walk_mps": [
+          8.356
+        ],
+        "render.avg_fps": [
+          326.906
+        ],
+        "render.low_1pct_fps": [
+          86.581
+        ],
+        "render.low_01pct_fps": [
+          80.851
+        ],
+        "render.p50_ms": [
+          2.203
+        ],
+        "render.p95_ms": [
+          8.403
+        ],
+        "render.p99_ms": [
+          11.148
+        ],
+        "render.p999_ms": [
+          12.269
+        ],
+        "render.max_ms": [
+          12.535
+        ],
+        "render.frames": [
+          2619.0
+        ],
+        "render.cpu_p50_ms": [
+          0.714
+        ],
+        "render.cpu_p99_ms": [
+          2.535
+        ],
+        "render.gpu_p50_ms": [
+          1.698
+        ],
+        "render.gpu_p99_ms": [
+          8.763
+        ],
+        "render.gpu_wait_p50_ms": [
+          1.334
+        ],
+        "run.wall_s": [
+          8.039
+        ],
+        "tick.tps": [
+          20.151
+        ],
+        "tick.mspt": [
+          6.216
+        ],
+        "tick.mspt_max": [
+          8.592
+        ],
+        "tick.client_ms": [
+          0.521
+        ],
+        "process.rss_peak_mb": [
+          815.047
+        ],
+        "process.rss_steady_mb": [
+          814.031
+        ],
+        "process.rss_samples": [
+          16.0
+        ],
+        "process.cpu_cores_used": [
+          0.678
+        ],
+        "process.cpu_seconds": [
+          5.453
+        ]
+      },
+      "checks": [
+        {
+          "name": "player moved",
+          "expected": "> 3 blocks",
+          "actual": "16.88",
+          "passed": true
+        }
+      ],
+      "frames": [
+        {
+          "phase": "after_walk",
+          "repeat": 0,
+          "frames": 2619,
+          "seconds": 8.011,
+          "avg_fps": 326.906,
+          "low_1pct_fps": 86.581,
+          "low_01pct_fps": 80.851,
+          "p50_ms": 2.203,
+          "p95_ms": 8.403,
+          "p99_ms": 11.148,
+          "p999_ms": 12.269,
+          "max_ms": 12.535,
+          "cpu_p50_ms": 0.714,
+          "cpu_p99_ms": 2.535,
+          "gpu_p50_ms": 1.698,
+          "gpu_p99_ms": 8.763,
+          "gpu_wait_p50_ms": 1.334,
+          "histogram": [
+            142,
+            1046,
+            382,
+            445,
+            280,
+            97,
+            58,
+            30,
+            83,
+            52,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "notes": [
+        "walk start=[-533.5, 201.0, 17.5] end=[-533.5, 201.0, 34.383487095176115] distance=16.88",
+        "sprint for 2 s on a controlled stone platform"
+      ],
+      "valid": true
+    },
+    {
+      "name": "explore",
+      "category": "worldgen",
+      "seconds": 20.0,
+      "repeats": 1,
+      "samples": {
+        "render.avg_fps": [
+          295.232
+        ],
+        "render.low_1pct_fps": [
+          88.387
+        ],
+        "render.low_01pct_fps": [
+          40.135
+        ],
+        "render.p50_ms": [
+          3.445
+        ],
+        "render.p95_ms": [
+          6.831
+        ],
+        "render.p99_ms": [
+          8.18
+        ],
+        "render.p999_ms": [
+          15.206
+        ],
+        "render.max_ms": [
+          63.277
+        ],
+        "render.frames": [
+          5904.0
+        ],
+        "render.cpu_p50_ms": [
+          0.766
+        ],
+        "render.cpu_p99_ms": [
+          4.267
+        ],
+        "render.gpu_p50_ms": [
+          2.169
+        ],
+        "render.gpu_p99_ms": [
+          4.23
+        ],
+        "render.gpu_wait_p50_ms": [
+          2.434
+        ],
+        "run.wall_s": [
+          20.04
+        ],
+        "world.generated_chunks": [
+          1080.0
+        ],
+        "world.resident_chunks": [
+          637.0
+        ],
+        "world.travel_blocks": [
+          527.758
+        ],
+        "process.rss_peak_mb": [
+          878.43
+        ],
+        "process.rss_steady_mb": [
+          859.758
+        ],
+        "process.rss_samples": [
+          39.0
+        ],
+        "process.cpu_cores_used": [
+          2.723
+        ],
+        "process.cpu_seconds": [
+          54.563
+        ]
+      },
+      "checks": [
+        {
+          "name": "new terrain generated",
+          "expected": "> 0 chunks",
+          "actual": "1080",
+          "passed": true
+        },
+        {
+          "name": "terrain resident",
+          "expected": "> 0 chunks",
+          "actual": "637",
+          "passed": true
+        },
+        {
+          "name": "frames drawn",
+          "expected": "> 10",
+          "actual": "5904",
+          "passed": true
+        }
+      ],
+      "frames": [
+        {
+          "phase": "explore",
+          "repeat": 0,
+          "frames": 5904,
+          "seconds": 19.998,
+          "avg_fps": 295.232,
+          "low_1pct_fps": 88.387,
+          "low_01pct_fps": 40.135,
+          "p50_ms": 3.445,
+          "p95_ms": 6.831,
+          "p99_ms": 8.18,
+          "p999_ms": 15.206,
+          "max_ms": 63.277,
+          "cpu_p50_ms": 0.766,
+          "cpu_p99_ms": 4.267,
+          "gpu_p50_ms": 2.169,
+          "gpu_p99_ms": 4.23,
+          "gpu_wait_p50_ms": 2.434,
+          "histogram": [
+            617,
+            1282,
+            592,
+            1810,
+            501,
+            292,
+            564,
+            198,
+            25,
+            11,
+            4,
+            4,
+            3,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "notes": [
+        "512.0 blocks of travel over fresh terrain"
+      ],
+      "valid": true
+    },
+    {
+      "name": "mine_place",
+      "category": "gameplay",
+      "seconds": 8.0,
+      "repeats": 1,
+      "samples": {
+        "play.action_s": [
+          2.432
+        ],
+        "play.placed": [
+          8.0
+        ],
+        "play.broken": [
+          8.0
+        ],
+        "play.ops_per_s": [
+          6.58
+        ],
+        "render.avg_fps": [
+          338.687
+        ],
+        "render.low_1pct_fps": [
+          117.479
+        ],
+        "render.low_01pct_fps": [
+          109.188
+        ],
+        "render.p50_ms": [
+          2.455
+        ],
+        "render.p95_ms": [
+          7.948
+        ],
+        "render.p99_ms": [
+          8.323
+        ],
+        "render.p999_ms": [
+          8.691
+        ],
+        "render.max_ms": [
+          9.789
+        ],
+        "render.frames": [
+          2711.0
+        ],
+        "render.cpu_p50_ms": [
+          0.85
+        ],
+        "render.cpu_p99_ms": [
+          2.806
+        ],
+        "render.gpu_p50_ms": [
+          1.244
+        ],
+        "render.gpu_p99_ms": [
+          5.358
+        ],
+        "render.gpu_wait_p50_ms": [
+          1.437
+        ],
+        "run.wall_s": [
+          8.023
+        ],
+        "tick.tps": [
+          20.067
+        ],
+        "tick.mspt": [
+          5.364
+        ],
+        "tick.mspt_max": [
+          7.916
+        ],
+        "tick.client_ms": [
+          0.431
+        ],
+        "process.rss_peak_mb": [
+          902.863
+        ],
+        "process.rss_steady_mb": [
+          899.734
+        ],
+        "process.rss_samples": [
+          16.0
+        ],
+        "process.cpu_cores_used": [
+          0.676
+        ],
+        "process.cpu_seconds": [
+          5.422
+        ]
+      },
+      "checks": [
+        {
+          "name": "blocks placed",
+          "expected": ">= 6",
+          "actual": "8",
+          "passed": true
+        },
+        {
+          "name": "blocks broken",
+          "expected": ">= 6",
+          "actual": "8",
+          "passed": true
+        }
+      ],
+      "frames": [
+        {
+          "phase": "after_mining",
+          "repeat": 0,
+          "frames": 2711,
+          "seconds": 8.004,
+          "avg_fps": 338.687,
+          "low_1pct_fps": 117.479,
+          "low_01pct_fps": 109.188,
+          "p50_ms": 2.455,
+          "p95_ms": 7.948,
+          "p99_ms": 8.323,
+          "p999_ms": 8.691,
+          "max_ms": 9.789,
+          "cpu_p50_ms": 0.85,
+          "cpu_p99_ms": 2.806,
+          "gpu_p50_ms": 1.244,
+          "gpu_p99_ms": 5.358,
+          "gpu_wait_p50_ms": 1.437,
+          "histogram": [
+            492,
+            673,
+            620,
+            178,
+            181,
+            340,
+            37,
+            164,
+            26,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "notes": [
+        "place and break stone on a controlled platform"
+      ],
+      "valid": true
+    },
+    {
+      "name": "crafting",
+      "category": "gameplay",
+      "seconds": 8.0,
+      "repeats": 1,
+      "samples": {
+        "play.oak_logs_given": [
+          4.0
+        ],
+        "play.oak_planks": [
+          16.0
+        ],
+        "render.avg_fps": [
+          281.752
+        ],
+        "render.low_1pct_fps": [
+          65.443
+        ],
+        "render.low_01pct_fps": [
+          40.37
+        ],
+        "render.p50_ms": [
+          2.317
+        ],
+        "render.p95_ms": [
+          9.042
+        ],
+        "render.p99_ms": [
+          12.424
+        ],
+        "render.p999_ms": [
+          18.868
+        ],
+        "render.max_ms": [
+          36.047
+        ],
+        "render.frames": [
+          2258.0
+        ],
+        "render.cpu_p50_ms": [
+          1.002
+        ],
+        "render.cpu_p99_ms": [
+          4.789
+        ],
+        "render.gpu_p50_ms": [
+          1.062
+        ],
+        "render.gpu_p99_ms": [
+          9.593
+        ],
+        "render.gpu_wait_p50_ms": [
+          1.168
+        ],
+        "run.wall_s": [
+          8.046
+        ],
+        "tick.tps": [
+          20.135
+        ],
+        "tick.mspt": [
+          6.484
+        ],
+        "tick.mspt_max": [
+          30.371
+        ],
+        "tick.client_ms": [
+          0.47
+        ],
+        "process.rss_peak_mb": [
+          899.031
+        ],
+        "process.rss_steady_mb": [
+          889.621
+        ],
+        "process.rss_samples": [
+          15.0
+        ],
+        "process.cpu_cores_used": [
+          1.055
+        ],
+        "process.cpu_seconds": [
+          8.484
+        ]
+      },
+      "checks": [
+        {
+          "name": "craft result",
+          "expected": "oak_planks",
+          "actual": "oak_planks",
+          "passed": true
+        },
+        {
+          "name": "planks obtained",
+          "expected": ">= 1",
+          "actual": "16",
+          "passed": true
+        }
+      ],
+      "frames": [
+        {
+          "phase": "after_crafting",
+          "repeat": 0,
+          "frames": 2258,
+          "seconds": 8.014,
+          "avg_fps": 281.752,
+          "low_1pct_fps": 65.443,
+          "low_01pct_fps": 40.37,
+          "p50_ms": 2.317,
+          "p95_ms": 9.042,
+          "p99_ms": 12.424,
+          "p999_ms": 18.868,
+          "max_ms": 36.047,
+          "cpu_p50_ms": 1.002,
+          "cpu_p99_ms": 4.789,
+          "gpu_p50_ms": 1.062,
+          "gpu_p99_ms": 9.593,
+          "gpu_wait_p50_ms": 1.168,
+          "histogram": [
+            384,
+            609,
+            345,
+            193,
+            60,
+            55,
+            359,
+            26,
+            185,
+            17,
+            13,
+            8,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "notes": [
+        "crafted oak_planks from the log in slot 0",
+        "one oak log into the survival crafting grid and the result taken"
+      ],
+      "valid": true
+    },
+    {
+      "name": "combat",
+      "category": "entities",
+      "seconds": 8.0,
+      "repeats": 1,
+      "samples": {
+        "play.attacks": [
+          1.0
+        ],
+        "play.action_s": [
+          0.423
+        ],
+        "combat.health_before": [
+          20.0
+        ],
+        "combat.health_after": [
+          18.575
+        ],
+        "render.avg_fps": [
+          403.183
+        ],
+        "render.low_1pct_fps": [
+          111.626
+        ],
+        "render.low_01pct_fps": [
+          106.989
+        ],
+        "render.p50_ms": [
+          1.923
+        ],
+        "render.p95_ms": [
+          6.176
+        ],
+        "render.p99_ms": [
+          8.805
+        ],
+        "render.p999_ms": [
+          9.066
+        ],
+        "render.max_ms": [
+          9.997
+        ],
+        "render.frames": [
+          3226.0
+        ],
+        "render.cpu_p50_ms": [
+          0.924
+        ],
+        "render.cpu_p99_ms": [
+          2.638
+        ],
+        "render.gpu_p50_ms": [
+          1.047
+        ],
+        "render.gpu_p99_ms": [
+          5.849
+        ],
+        "render.gpu_wait_p50_ms": [
+          0.793
+        ],
+        "run.wall_s": [
+          8.025
+        ],
+        "tick.tps": [
+          20.063
+        ],
+        "tick.mspt": [
+          5.541
+        ],
+        "tick.mspt_max": [
+          7.333
+        ],
+        "tick.client_ms": [
+          0.449
+        ],
+        "process.rss_peak_mb": [
+          875.227
+        ],
+        "process.rss_steady_mb": [
+          873.176
+        ],
+        "process.rss_samples": [
+          16.0
+        ],
+        "process.cpu_cores_used": [
+          0.835
+        ],
+        "process.cpu_seconds": [
+          6.703
+        ]
+      },
+      "checks": [
+        {
+          "name": "target took damage",
+          "expected": "< 20.0",
+          "actual": "18.575000762939453",
+          "passed": true
+        }
+      ],
+      "frames": [
+        {
+          "phase": "after_combat",
+          "repeat": 0,
+          "frames": 3226,
+          "seconds": 8.001,
+          "avg_fps": 403.183,
+          "low_1pct_fps": 111.626,
+          "low_01pct_fps": 106.989,
+          "p50_ms": 1.923,
+          "p95_ms": 6.176,
+          "p99_ms": 8.805,
+          "p999_ms": 9.066,
+          "max_ms": 9.997,
+          "cpu_p50_ms": 0.924,
+          "cpu_p99_ms": 2.638,
+          "gpu_p50_ms": 1.047,
+          "gpu_p99_ms": 5.849,
+          "gpu_wait_p50_ms": 0.793,
+          "histogram": [
+            634,
+            1032,
+            582,
+            486,
+            183,
+            77,
+            135,
+            13,
+            84,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "notes": [
+        "target 1677: health 20.0 -> 18.575000762939453",
+        "attack a summoned zombie until its health falls"
+      ],
+      "valid": true
+    },
+    {
+      "name": "redstone",
+      "category": "simulation",
+      "seconds": 8.0,
+      "repeats": 1,
+      "samples": {
+        "redstone.piston_extended": [
+          1.0
+        ],
+        "redstone.lamp_lit": [
+          1.0
+        ],
+        "redstone.hopper_moved": [
+          5.0
+        ],
+        "render.avg_fps": [
+          331.341
+        ],
+        "render.low_1pct_fps": [
+          111.585
+        ],
+        "render.low_01pct_fps": [
+          100.458
+        ],
+        "render.p50_ms": [
+          3.087
+        ],
+        "render.p95_ms": [
+          5.979
+        ],
+        "render.p99_ms": [
+          8.608
+        ],
+        "render.p999_ms": [
+          9.669
+        ],
+        "render.max_ms": [
+          10.169
+        ],
+        "render.frames": [
+          2651.0
+        ],
+        "render.cpu_p50_ms": [
+          0.826
+        ],
+        "render.cpu_p99_ms": [
+          2.984
+        ],
+        "render.gpu_p50_ms": [
+          2.929
+        ],
+        "render.gpu_p99_ms": [
+          5.772
+        ],
+        "render.gpu_wait_p50_ms": [
+          2.231
+        ],
+        "run.wall_s": [
+          8.025
+        ],
+        "tick.tps": [
+          20.061
+        ],
+        "tick.mspt": [
+          4.804
+        ],
+        "tick.mspt_max": [
+          8.504
+        ],
+        "tick.client_ms": [
+          0.414
+        ],
+        "process.rss_peak_mb": [
+          880.039
+        ],
+        "process.rss_steady_mb": [
+          878.75
+        ],
+        "process.rss_samples": [
+          15.0
+        ],
+        "process.cpu_cores_used": [
+          0.596
+        ],
+        "process.cpu_seconds": [
+          4.781
+        ]
+      },
+      "checks": [
+        {
+          "name": "piston extends",
+          "expected": "piston_head",
+          "actual": "minecraft:piston_head",
+          "passed": true
+        },
+        {
+          "name": "piston retracts",
+          "expected": "air",
+          "actual": "minecraft:air",
+          "passed": true
+        },
+        {
+          "name": "repeater lights lamp",
+          "expected": "lit=true",
+          "actual": "minecraft:redstone_lamp",
+          "passed": true
+        },
+        {
+          "name": "lamp turns off",
+          "expected": "lit=false",
+          "actual": "minecraft:redstone_lamp",
+          "passed": true
+        },
+        {
+          "name": "hopper transfers",
+          "expected": ">= 1 item",
+          "actual": "5",
+          "passed": true
+        }
+      ],
+      "frames": [
+        {
+          "phase": "after_redstone",
+          "repeat": 0,
+          "frames": 2651,
+          "seconds": 8.001,
+          "avg_fps": 331.341,
+          "low_1pct_fps": 111.585,
+          "low_01pct_fps": 100.458,
+          "p50_ms": 3.087,
+          "p95_ms": 5.979,
+          "p99_ms": 8.608,
+          "p999_ms": 9.669,
+          "max_ms": 10.169,
+          "cpu_p50_ms": 0.826,
+          "cpu_p99_ms": 2.984,
+          "gpu_p50_ms": 2.929,
+          "gpu_p99_ms": 5.772,
+          "gpu_wait_p50_ms": 2.231,
+          "histogram": [
+            316,
+            506,
+            383,
+            815,
+            385,
+            117,
+            70,
+            16,
+            41,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "notes": [
+        "lamp lit=True; repeater powered=True; hopper had 5 item(s), chest ended with 5",
+        "piston, repeater/lamp and hopper/chest, each state asserted"
+      ],
+      "valid": true
+    },
+    {
+      "name": "entities",
+      "category": "entities",
+      "seconds": 8.0,
+      "repeats": 1,
+      "samples": {
+        "play.spawn_s": [
+          9.984
+        ],
+        "entities.mobs": [
+          200.0
+        ],
+        "entities.spawned": [
+          200.0
+        ],
+        "render.avg_fps": [
+          310.966
+        ],
+        "render.low_1pct_fps": [
+          90.486
+        ],
+        "render.low_01pct_fps": [
+          69.867
+        ],
+        "render.p50_ms": [
+          2.618
+        ],
+        "render.p95_ms": [
+          6.912
+        ],
+        "render.p99_ms": [
+          7.79
+        ],
+        "render.p999_ms": [
+          14.037
+        ],
+        "render.max_ms": [
+          14.833
+        ],
+        "render.frames": [
+          2488.0
+        ],
+        "render.cpu_p50_ms": [
+          1.666
+        ],
+        "render.cpu_p99_ms": [
+          4.099
+        ],
+        "render.gpu_p50_ms": [
+          2.052
+        ],
+        "render.gpu_p99_ms": [
+          5.166
+        ],
+        "render.gpu_wait_p50_ms": [
+          0.84
+        ],
+        "run.wall_s": [
+          8.02
+        ],
+        "tick.tps": [
+          20.074
+        ],
+        "tick.mspt": [
+          6.042
+        ],
+        "tick.mspt_max": [
+          7.569
+        ],
+        "tick.client_ms": [
+          0.585
+        ],
+        "process.rss_peak_mb": [
+          880.496
+        ],
+        "process.rss_steady_mb": [
+          880.367
+        ],
+        "process.rss_samples": [
+          16.0
+        ],
+        "process.cpu_cores_used": [
+          0.941
+        ],
+        "process.cpu_seconds": [
+          7.547
+        ]
+      },
+      "checks": [
+        {
+          "name": "mobs spawned",
+          "expected": ">= 160",
+          "actual": "200",
+          "passed": true
+        }
+      ],
+      "frames": [
+        {
+          "phase": "dense_entities",
+          "repeat": 0,
+          "frames": 2488,
+          "seconds": 8.001,
+          "avg_fps": 310.966,
+          "low_1pct_fps": 90.486,
+          "low_01pct_fps": 69.867,
+          "p50_ms": 2.618,
+          "p95_ms": 6.912,
+          "p99_ms": 7.79,
+          "p999_ms": 14.037,
+          "max_ms": 14.833,
+          "cpu_p50_ms": 1.666,
+          "cpu_p99_ms": 4.099,
+          "gpu_p50_ms": 2.052,
+          "gpu_p99_ms": 5.166,
+          "gpu_wait_p50_ms": 0.84,
+          "histogram": [
+            0,
+            599,
+            876,
+            543,
+            111,
+            126,
+            115,
+            98,
+            3,
+            8,
+            6,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "notes": [
+        "200 still, no-AI mobs in view"
+      ],
+      "valid": true
+    },
+    {
+      "name": "mixed",
+      "category": "soak",
+      "seconds": 20.0,
+      "repeats": 1,
+      "samples": {
+        "render.avg_fps": [
+          291.235
+        ],
+        "render.low_1pct_fps": [
+          114.97
+        ],
+        "render.low_01pct_fps": [
+          66.536
+        ],
+        "render.p50_ms": [
+          3.307
+        ],
+        "render.p95_ms": [
+          5.884
+        ],
+        "render.p99_ms": [
+          7.128
+        ],
+        "render.p999_ms": [
+          13.126
+        ],
+        "render.max_ms": [
+          20.169
+        ],
+        "render.frames": [
+          6089.0
+        ],
+        "render.cpu_p50_ms": [
+          1.7
+        ],
+        "render.cpu_p99_ms": [
+          4.792
+        ],
+        "render.gpu_p50_ms": [
+          2.214
+        ],
+        "render.gpu_p99_ms": [
+          5.547
+        ],
+        "render.gpu_wait_p50_ms": [
+          1.29
+        ],
+        "run.wall_s": [
+          20.954,
+          20.954
+        ],
+        "play.actions": [
+          118.0
+        ],
+        "play.action_s": [
+          20.954
+        ],
+        "tick.tps": [
+          19.996
+        ],
+        "process.rss_peak_mb": [
+          881.043
+        ],
+        "process.rss_steady_mb": [
+          873.129
+        ],
+        "process.rss_samples": [
+          41.0
+        ],
+        "process.cpu_cores_used": [
+          1.069
+        ],
+        "process.cpu_seconds": [
+          22.406
+        ],
+        "memory.rss_slope_mb_per_min": [
+          -68.306
+        ]
+      },
+      "checks": [
+        {
+          "name": "actions completed",
+          "expected": "> 10",
+          "actual": "118",
+          "passed": true
+        },
+        {
+          "name": "ticks advanced",
+          "expected": "> 20",
+          "actual": "419",
+          "passed": true
+        },
+        {
+          "name": "frames drawn",
+          "expected": "> 10",
+          "actual": "6089",
+          "passed": true
+        }
+      ],
+      "frames": [
+        {
+          "phase": "mixed",
+          "repeat": 0,
+          "frames": 6089,
+          "seconds": 20.908,
+          "avg_fps": 291.235,
+          "low_1pct_fps": 114.97,
+          "low_01pct_fps": 66.536,
+          "p50_ms": 3.307,
+          "p95_ms": 5.884,
+          "p99_ms": 7.128,
+          "p999_ms": 13.126,
+          "max_ms": 20.169,
+          "cpu_p50_ms": 1.7,
+          "cpu_p99_ms": 4.792,
+          "gpu_p50_ms": 2.214,
+          "gpu_p99_ms": 5.547,
+          "gpu_wait_p50_ms": 1.29,
+          "histogram": [
+            0,
+            1264,
+            1444,
+            1463,
+            983,
+            681,
+            182,
+            53,
+            10,
+            1,
+            5,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "notes": [
+        "teleports, mining, placing, inventory and combat in one continuous session"
+      ],
+      "valid": true
+    }
+  ]
+}

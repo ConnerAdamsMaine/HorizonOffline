@@ -34,6 +34,7 @@ EXEMPT = {
     "test_item_use_order_parity.py": "starts servers through test_server_knockback_parity.run_side; its Server uses game_environment",
     "test_bed_explosion_parity.py": "starts servers through test_server_knockback_parity.run_side; its Server uses game_environment",
     "port_harness.py": "ports Java code, starts no game",
+    "cargo_build.py": "builds binaries with cargo; it never starts the game",
 }
 
 

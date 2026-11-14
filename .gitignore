@@ -35,3 +35,12 @@
 
 # Release-only compiled original exporter bundle.
 /exporters/
+
+# Ad-hoc gameplay-benchmark runs and bounded trace dumps. The qualified baselines, their repeat
+# and the final profiling summary are checked in; tier runs and experiments are not.
+/benchmarks/gameplay/*
+!/benchmarks/gameplay/baseline-*.json
+!/benchmarks/gameplay/baseline-*.md
+!/benchmarks/gameplay/profile-*.json
+!/benchmarks/gameplay/profile-*.md
+/traces/

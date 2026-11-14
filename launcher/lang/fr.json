@@ -1295,5 +1295,7 @@
   "Could not open {path}: {error}": "Could not open {path}: {error}",
   "Installed payload {key} for {tag} at {folder}.": "Installed payload {key} for {tag} at {folder}.",
   "Wrote payload {key} for {tag} to {out}.": "Wrote payload {key} for {tag} to {out}.",
-  "This launcher carries no game payload.": "This launcher carries no game payload."
+  "This launcher carries no game payload.": "This launcher carries no game payload.",
+  "The exporter sources at {folder} are not readable: {error}": "Les sources des exportateurs dans {folder} sont illisibles : {error}",
+  "The payload has no exporter sources under {folder}.": "Le paquet ne contient aucune source d'exportateur dans {folder}."
 }

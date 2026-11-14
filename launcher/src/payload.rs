@@ -760,7 +760,11 @@ fn in_use(dir: &Path) -> bool {
 /// the payload's `research-lock.json` when it carries one, and the Java exporters its preparer
 /// compiles. The payload itself is untouched.
 pub fn ensure_version(manifest: &Manifest) -> Result<String, String> {
-    ensure_version_in(&root(), &crate::backend::version_dir(&manifest.tag), manifest)?;
+    ensure_version_in(
+        &root(),
+        &crate::backend::version_dir(&manifest.tag),
+        manifest,
+    )?;
     Ok(manifest.tag.clone())
 }
 
@@ -808,7 +812,6 @@ fn is_exporter_source(path: &str) -> bool {
     path.strip_prefix(EXPORTER_SOURCES)
         .is_some_and(|rest| rest.starts_with('/'))
 }
-
 
 /// A payload file's bytes by manifest path, for the packaging tool.
 pub fn read_file(dir: &Path, path: &str) -> Result<Vec<u8>, String> {
@@ -893,10 +896,7 @@ pub fn pack(input: &Path, sources: &Path, tag: &str, out: &Path) -> Result<Manif
     walk(&tree, &tree, &mut java).map_err(|e| {
         crate::i18n::trf(
             "The exporter sources at {folder} are not readable: {error}",
-            &[
-                ("folder", &tree.display().to_string()),
-                ("error", &e),
-            ],
+            &[("folder", &tree.display().to_string()), ("error", &e)],
         )
     })?;
     java.retain(|path| path.extension().is_some_and(|e| e == "java"));

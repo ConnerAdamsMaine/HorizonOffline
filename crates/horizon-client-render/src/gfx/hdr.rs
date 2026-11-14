@@ -1388,9 +1388,13 @@ var<private> params: ReferenceParams;
         blur.blur(&device, &queue, &mut encoder, &view, size, 3.0, None);
         hdr.keep_world(&mut encoder, None);
         let hud = hdr.hud().unwrap().clone();
-        // The blurred world keeps its light, and the HUD's backdrop starts again from it.
+        // The blurred world keeps its light, and the HUD's backdrop starts again from it. The
+        // tolerance is half-float precision, not a blurred-lighting allowance: six passes over an
+        // Rgba16Float target quantize the light in 2^-8 steps near 4 (this GPU lands on
+        // 3.98828125 = 4 - 3 * 2^-8), and requiring 0.25% here measured the target's precision
+        // rather than the blur's normalization.
         let [r, ..] = texel(&device, &queue, encoder, &frame);
-        assert!((r - 4.0).abs() < 0.01, "{r}");
+        assert!((r - 4.0).abs() <= 4.0 * 0.005, "blurred light {r} left 4.0");
         let encoder = device.create_command_encoder(&Default::default());
         assert_eq!(texel(&device, &queue, encoder, &hud), [1.0, 1.0, 1.0, 0.0]);
     }

@@ -12,8 +12,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 
 mod hardware;
+pub mod suite;
 
 pub use hardware::{cpu_seconds, load_average, power_source, rss_bytes, Display, Gpu, Hardware};
+pub use suite::{compare, Comparison, ComparisonOptions, RunInfo, Scenario, Suite};
 
 pub const FORMAT: &str = "horizon-benchmark-report";
 pub const VERSION: u32 = 1;
@@ -147,7 +149,15 @@ pub struct Frames {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cpu_p50_ms: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpu_p99_ms: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gpu_p50_ms: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gpu_p99_ms: Option<f64>,
+    /// Median of frame time minus CPU time: time the frame waited for the GPU, the display or the
+    /// limiter. Large next to `cpu_p50_ms` means the CPU was not the bottleneck.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gpu_wait_p50_ms: Option<f64>,
     /// Frame counts per bucket of [`HISTOGRAM_EDGES_MS`].
     pub histogram: Vec<u64>,
 }
@@ -191,7 +201,18 @@ impl Frames {
             p999_ms: round(percentile(&times, 0.999)),
             max_ms: round(times[n - 1]),
             cpu_p50_ms: (!cpu_ms.is_empty()).then(|| round(percentile(&sorted(cpu_ms), 0.5))),
+            cpu_p99_ms: (!cpu_ms.is_empty()).then(|| round(percentile(&sorted(cpu_ms), 0.99))),
             gpu_p50_ms: (!gpu_ms.is_empty()).then(|| round(percentile(&sorted(gpu_ms), 0.5))),
+            gpu_p99_ms: (!gpu_ms.is_empty()).then(|| round(percentile(&sorted(gpu_ms), 0.99))),
+            gpu_wait_p50_ms: (!cpu_ms.is_empty()).then(|| {
+                let waits: Vec<f32> = frame_ms
+                    .iter()
+                    .zip(cpu_ms)
+                    .map(|(frame, cpu)| frame - cpu)
+                    .filter(|wait| wait.is_finite())
+                    .collect();
+                round(percentile(&sorted(&waits), 0.5))
+            }),
             histogram,
         })
     }
@@ -402,7 +423,14 @@ mod tests {
         assert_eq!(f.histogram[13], 1, "20 ms falls in [20, 25)");
         assert_eq!(f.histogram[23], 1, "1500 ms falls in [1000, inf)");
         assert_eq!(f.histogram.iter().sum::<u64>(), 1000);
-        assert_eq!((f.cpu_p50_ms, f.gpu_p50_ms), (None, None));
+        assert_eq!(
+            (f.cpu_p50_ms, f.cpu_p99_ms, f.gpu_p50_ms, f.gpu_p99_ms),
+            (None, None, None, None)
+        );
+        let g = Frames::of("x", 0, &[10.0, 20.0], &[4.0, 8.0], &[6.0, 15.0]).unwrap();
+        assert_eq!((g.cpu_p50_ms, g.cpu_p99_ms), (Some(4.0), Some(8.0)));
+        assert_eq!((g.gpu_p50_ms, g.gpu_p99_ms), (Some(6.0), Some(15.0)));
+        assert_eq!(g.gpu_wait_p50_ms, Some(6.0), "10 - 4 and 20 - 8");
         assert_eq!(Frames::of("x", 0, &[], &[], &[]), None);
     }
 

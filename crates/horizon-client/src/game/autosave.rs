@@ -50,7 +50,7 @@ impl Game<'_> {
         self.save_warden_tracker();
         self.sync_level();
         // Level::write can synchronously replace the integrated owner file.
-        let _ = self.finish_player_autosaves(true);
+        self.finish_player_autosaves(true)?;
         let stored_owner = self.store_owner();
         write_level_for_role(
             &mut self.level,
@@ -91,7 +91,6 @@ impl Game<'_> {
             self.lan = Some(host);
         }
         self.save_world_state();
-        self.message = Some(("Saved the game".into(), Instant::now()));
         Ok(())
     }
 }

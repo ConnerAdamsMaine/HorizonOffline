@@ -6097,7 +6097,14 @@ impl Game<'_> {
                             f64::from(pos.y) - 0.5,
                             f64::from(pos.z) + dz,
                         ];
-                        let _ = self.spawn_mob_raw("minecraft:tadpole", spawn, true);
+                        if self
+                            .spawn_mob_raw("minecraft:tadpole", spawn, true)
+                            .is_none()
+                        {
+                            log::warn!(
+                                "Horizon: frogspawn at {pos:?} could not spawn a tadpole at {spawn:?}"
+                            );
+                        }
                     }
                 }
                 LevelEvent::BlockEvent {
@@ -7780,7 +7787,12 @@ impl Game<'_> {
         }
         // ClientLevel.tick: the sky flash fades in a frozen level too.
         self.tick_weather_effects();
-        let _ = self.finish_player_autosaves(false);
+        if let Err(error) = self.finish_player_autosaves(false) {
+            log::error!(
+                "Horizon: player autosave in {} failed: {error}",
+                self.world_root.display()
+            );
+        }
         // MinecraftServer.tickServer's countdown, then autoSave: three
         // hundred seconds of ticks at the rate the server runs at now.
         self.ticks_until_autosave -= 1;
@@ -13935,7 +13947,9 @@ impl Game<'_> {
         self.save_level(wait)?;
         self.save_parked_levels(wait)?;
         self.save_game_metadata()?;
-        let _ = self.finish_player_autosaves(wait);
+        if self.finish_player_autosaves(wait)? {
+            self.message = Some(("Saved the game".into(), Instant::now()));
+        }
         self.native_world_saved(wait);
         if dedicated {
             dedicated::events::record_server("saved", serde_json::json!({}));

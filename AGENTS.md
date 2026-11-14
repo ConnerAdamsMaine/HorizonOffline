@@ -103,6 +103,8 @@ python3 tools/lan_e2e.py --check chest     # two real games over LAN (server-thr
 python3 tools/agent_control_e2e.py         # horizon-ctl / MCP end to end
 ```
 
+- Build with the resource-aware wrapper: `python3 tools/cargo_build.py --profile fast` (or `release`/`bench`); it chooses a job count from RAM and documents the profiles in [docs/build-profiles.md](docs/build-profiles.md). The `bench` profile is release-equivalent with line tables and writes to `target/release`.
+- Gameplay benchmarks: `python3 tools/gameplay_bench.py --build target/release --smoke` (real controls, tick/memory/frame samples, correctness checks); compare two runs with `target/release/horizon-bench.exe compare before.json after.json`. See [docs/benchmark-suite.md](docs/benchmark-suite.md).
 - Harnesses and the game need the vanilla data in `.local/` (`minecraft/`, `horizon-client/26.3`, `datagen/`,
   `tools/`): see [docs/parity-workflow.md](docs/parity-workflow.md). Without it, pr_ready lists the
   harnesses for CI.

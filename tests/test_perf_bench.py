@@ -105,6 +105,12 @@ class PerfBenchStatsTests(unittest.TestCase):
         self.assertEqual(summary([5.0])["ci95"], None)
         self.assertIsNone(summary([None]))
 
+    def test_cpu_and_gpu_tails_and_gpu_wait(self):
+        s = frames("x", 0, [10.0, 20.0], [4.0, 8.0], [6.0, 15.0])
+        self.assertEqual((s["cpu_p50_ms"], s["cpu_p99_ms"]), (4.0, 8.0))
+        self.assertEqual((s["gpu_p50_ms"], s["gpu_p99_ms"]), (6.0, 15.0))
+        self.assertEqual(s["gpu_wait_p50_ms"], 6.0, "10 - 4 and 20 - 8")
+
     def test_a_short_flight_still_has_lows(self):
         s = frames("x", 0, [5.0, 20.0])
         self.assertEqual((s["low_1pct_fps"], s["low_01pct_fps"]), (50.0, 50.0))

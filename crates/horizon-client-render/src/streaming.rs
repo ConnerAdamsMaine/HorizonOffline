@@ -421,14 +421,17 @@ struct Mailbox {
 }
 impl Mailbox {
     fn send(&self, done: Done) {
-        self.done.lock().unwrap().push_back(done);
+        self.done
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push_back(done);
         self.arrived.notify_one();
     }
     fn try_lock(&self) -> Option<MutexGuard<'_, VecDeque<Done>>> {
         match self.done.try_lock() {
             Ok(done) => Some(done),
             Err(TryLockError::WouldBlock) => None,
-            Err(TryLockError::Poisoned(e)) => panic!("{e}"),
+            Err(TryLockError::Poisoned(e)) => Some(e.into_inner()),
         }
     }
     /// Every finished job, or none while a worker is sending.
@@ -441,11 +444,11 @@ impl Mailbox {
         self.try_lock()?.pop_front()
     }
     fn recv_timeout(&self, timeout: std::time::Duration) -> Option<Done> {
-        let done = self.done.lock().unwrap();
+        let done = self.done.lock().unwrap_or_else(|e| e.into_inner());
         let (mut done, _) = self
             .arrived
             .wait_timeout_while(done, timeout, |done| done.is_empty())
-            .unwrap();
+            .unwrap_or_else(|e| e.into_inner());
         done.pop_front()
     }
 }
@@ -837,7 +840,7 @@ struct Jobs<G: ChunkGenerator> {
 }
 impl<G: ChunkGenerator> Source for Jobs<G> {
     fn next(&self) -> Option<Rank> {
-        let queue = self.shared.queue.lock().unwrap();
+        let queue = self.shared.queue.lock().unwrap_or_else(|e| e.into_inner());
         if self
             .shared
             .aborted
@@ -861,7 +864,13 @@ impl<G: ChunkGenerator> Source for Jobs<G> {
         })
     }
     fn run(&self, worker: usize) -> bool {
-        let Some(job) = self.shared.queue.lock().unwrap().pop() else {
+        let Some(job) = self
+            .shared
+            .queue
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .pop()
+        else {
             return false;
         };
         if self
@@ -943,7 +952,8 @@ impl<G: ChunkGenerator> Source for Jobs<G> {
     fn all_idle(&self) {
         // No worker needs retained mesh capacity now. Drop it outside the
         // pool lock; the pool then asks the allocator to return freed pages.
-        let meshes = std::mem::take(&mut *self.shared.meshes.lock().unwrap());
+        let meshes =
+            std::mem::take(&mut *self.shared.meshes.lock().unwrap_or_else(|e| e.into_inner()));
         drop(meshes);
         self.generator.all_idle();
     }
@@ -1005,7 +1015,11 @@ impl<G: ChunkGenerator> Jobs<G> {
             }
             Job::Free(meshes) => {
                 for (_, mesh) in meshes {
-                    let rejected = shared.meshes.lock().unwrap().put(mesh);
+                    let rejected = shared
+                        .meshes
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .put(mesh);
                     drop(rejected);
                 }
                 return None;
@@ -1014,7 +1028,11 @@ impl<G: ChunkGenerator> Jobs<G> {
                 Done::Lit(x, z, light_chunk(&borrow(&region), light, sky), seq)
             }
             Job::Mesh(x, sy, z, region, seq, settings) => {
-                let context = shared.context.read().unwrap().clone();
+                let context = shared
+                    .context
+                    .read()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .clone();
                 let visibility = match faces.take() {
                     Some((tables, visibility)) if Arc::ptr_eq(&tables, &context.tables) => {
                         visibility
@@ -1039,7 +1057,11 @@ impl<G: ChunkGenerator> Jobs<G> {
                     biomes: &context.biomes,
                     visibility,
                 };
-                let recycled = shared.meshes.lock().unwrap().take();
+                let recycled = shared
+                    .meshes
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .take();
                 let mut mesh = mesher.mesh_reusing(&borrow(&region), sy, recycled, mesh_scratch);
                 mesh.sort_solid();
                 *faces = Some((context.tables.clone(), mesher.visibility));
@@ -1172,7 +1194,11 @@ impl Streaming {
     /// models and sprites, and rebuild every loaded section. Meshes in flight
     /// were made with the old resources; their results are dropped.
     pub fn reload_resources(&mut self, world: &mut World, context: Arc<WorkerContext>) {
-        *self.shared.context.write().unwrap() = context;
+        *self
+            .shared
+            .context
+            .write()
+            .unwrap_or_else(|e| e.into_inner()) = context;
         self.reload_sections(world);
     }
     /// `LevelExtractor.allChanged`: discard mesh work made before the reload and
@@ -1288,9 +1314,8 @@ impl Streaming {
         // `ChunkTaskPriorityQueue.release` for each of them (`ChunkTaskDispatcher`'s
         // `release(col, true)` from the chunk's unload): the jobs still queued for a
         // column go with it instead of running for a level they no longer belong to.
-        if !gone.is_empty()
-            && let Ok(mut queue) = self.shared.queue.lock()
-        {
+        if !gone.is_empty() {
+            let mut queue = self.shared.queue.lock().unwrap_or_else(|e| e.into_inner());
             release_columns(&mut queue, gone);
         }
         let mut chunks = Vec::with_capacity(gone.len());
@@ -1310,13 +1335,17 @@ impl Streaming {
     fn submit(&mut self, at: Option<(i32, i32)>, bias: i64, job: Job) {
         self.order += 1;
         let priority = at.map_or(i64::MIN, |(x, z)| self.distance(x, z) * 4 + bias);
-        self.shared.queue.lock().unwrap().push(Queued {
-            priority,
-            at,
-            bias,
-            order: self.order,
-            job,
-        });
+        self.shared
+            .queue
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(Queued {
+                priority,
+                at,
+                bias,
+                order: self.order,
+                job,
+            });
         self.jobs.notify();
     }
     /// Rank the queued jobs again when what their priorities were computed
@@ -1334,7 +1363,7 @@ impl Streaming {
             return;
         }
         self.queue_basis = (basis, self.extra.clone());
-        let mut queue = self.shared.queue.lock().unwrap();
+        let mut queue = self.shared.queue.lock().unwrap_or_else(|e| e.into_inner());
         rank_again(&mut queue, |x, z| self.distance(x, z));
     }
     fn receive_decorated(
@@ -1590,7 +1619,11 @@ impl Streaming {
         self.meshing.contains_key(&section)
     }
     pub fn pending(&self) -> usize {
-        self.shared.queue.lock().unwrap().len()
+        self.shared
+            .queue
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .len()
     }
     /// Whether any chunk is queued or on its way from generation to a mesh.
     pub fn busy(&self) -> bool {
@@ -2287,7 +2320,8 @@ impl Streaming {
         self.shared
             .aborted
             .store(true, std::sync::atomic::Ordering::SeqCst);
-        if let Ok(mut queue) = self.shared.queue.lock() {
+        {
+            let mut queue = self.shared.queue.lock().unwrap_or_else(|e| e.into_inner());
             let mut saves = Vec::new();
             for item in std::mem::take(&mut *queue).into_vec() {
                 if matches!(item.job, Job::Save(..)) {
@@ -3396,7 +3430,7 @@ mod tests {
         let lit = |seq| Done::Lit(0, 0, Vec::new(), seq);
         mailbox.send(lit(1));
         mailbox.send(lit(2));
-        let sending = mailbox.done.lock().unwrap();
+        let sending = mailbox.done.lock().unwrap_or_else(|e| e.into_inner());
         assert!(mailbox.take().is_empty());
         assert!(mailbox.try_recv().is_none());
         drop(sending);
@@ -3417,6 +3451,33 @@ mod tests {
                 .is_none()
         );
         assert!(waiting.elapsed() >= std::time::Duration::from_millis(10));
+    }
+
+    #[test]
+    fn poisoned_mailbox_preserves_finished_jobs() {
+        let mailbox = Mailbox::default();
+        mailbox.send(Done::Lit(0, 0, Vec::new(), 1));
+        assert!(std::thread::scope(|scope| {
+            scope
+                .spawn(|| {
+                    let _sending = mailbox.done.lock().unwrap_or_else(|e| e.into_inner());
+                    panic!("worker failed while holding the mailbox");
+                })
+                .join()
+                .is_err()
+        }));
+        assert!(mailbox.done.is_poisoned());
+        mailbox.send(Done::Lit(0, 0, Vec::new(), 2));
+        assert!(matches!(mailbox.try_recv(), Some(Done::Lit(_, _, _, 1))));
+        assert!(matches!(
+            mailbox.recv_timeout(std::time::Duration::ZERO),
+            Some(Done::Lit(_, _, _, 2))
+        ));
+        assert!(mailbox.recv_timeout(std::time::Duration::ZERO).is_none());
+        mailbox.send(Done::Lit(0, 0, Vec::new(), 3));
+        let mut done = mailbox.take();
+        assert!(matches!(done.pop_front(), Some(Done::Lit(_, _, _, 3))));
+        assert!(done.is_empty());
     }
 
     /// Whether the forgotten columns are few (looked up by key) or many

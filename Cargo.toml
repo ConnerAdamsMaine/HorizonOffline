@@ -97,9 +97,15 @@ opt-level = 3
 [profile.release.package.proc-macro2]
 opt-level = 3
 
+# Production builds. Thin LTO keeps most of fat LTO's cross-crate inlining at a fraction of its
+# peak memory; four codegen units let rustc parallelize codegen instead of making one huge LLVM
+# module. The old release profile (thin LTO, codegen-units = 1) could need several GB per rustc
+# process and a multi-GB link step on crates as large as horizon-client. Use release-max below
+# when whole-program optimisation is worth a dedicated build machine.
 [profile.release]
 lto = "thin"
-codegen-units = 1
+codegen-units = 4
+strip = "debuginfo"
 
 # Optimized but quick-to-link builds for iteration: cargo build --profile fast
 [profile.fast]
@@ -107,3 +113,22 @@ inherits = "release"
 lto = false
 codegen-units = 16
 incremental = true
+
+# Reproducible performance measurements. It matches the production release profile (same LTO and
+# codegen units) and keeps line tables so profiles and backtraces are useful. Build with
+# `cargo build --profile bench`; do not benchmark `dev`.
+[profile.bench]
+inherits = "release"
+lto = "thin"
+codegen-units = 4
+debug = "line-tables-only"
+strip = false
+incremental = false
+
+# Explicitly opt-in whole-program optimisation for release engineers with a large machine.
+# Budget roughly 8-16 GB of RAM and a single long link for this workspace.
+[profile.release-max]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+strip = "symbols"

@@ -10,7 +10,8 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
 pub const REPO: &str = "ConnerAdamsMaine/HorizonOffline";
-pub const README_URL: &str = "https://github.com/ConnerAdamsMaine/HorizonOffline/blob/main/launcher/README.md";
+pub const README_URL: &str =
+    "https://github.com/ConnerAdamsMaine/HorizonOffline/blob/main/launcher/README.md";
 /// The players' page on connecting an AI agent (the website's docs/agents.md).
 pub const AGENT_DOCS_URL: &str = "https://playhorizon.dev/docs/agents";
 /// This launcher's version: the release workflow sets `HORIZON_LAUNCHER_VERSION` from the
